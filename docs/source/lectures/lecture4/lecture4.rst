@@ -1,3 +1,5 @@
+.. _l4-trajectory-prediction-overview:
+
 L4 - Trajectory Prediction
 ==================================================
 
@@ -30,6 +32,8 @@ Learning Objectives
 3. Comprehend modern learning-based prediction architectures including RNNs, GNNs, and Transformers
 4. Recognize the critical importance of uncertainty quantification and multimodal prediction
 5. Design and evaluate intent inference systems for anticipating high-level goals
+
+.. _l4-Prediction_Time_Horizons:
 
 Prediction Time Horizons
 -------------------------
@@ -93,6 +97,9 @@ Requirements for prediction systems:
 - **Multimodal**: Represent multiple possible futures (turn left OR go straight)
 - **Probabilistic**: Assign likelihoods to different outcomes
 - **Contextual**: Incorporate map data, traffic rules, and social norms
+
+
+.. _l4-physics_models:
 
 Physics-Based Prediction Models
 --------------------------------
@@ -222,6 +229,10 @@ accelerating or decelerating.
 - **Use Cases**: Highway merging, accelerating through curves, turning at intersections
 - **Optimal Horizon**: 1–3 seconds for curved trajectories with speed changes
 
+
+.. _l4-bicycle_model:
+
+
 Kinematic Bicycle Model
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -309,6 +320,9 @@ Include tire forces, slip angles, and load transfer for high-fidelity simulation
 - **Applications**: Vehicle simulation, motorsports, offline optimization, controller validation
 - **Why rarely used for prediction**: Cannot observe tire states or parameters for other vehicles; computational cost prohibitive for multi-agent real-time prediction
 
+
+.. _l4-learning_models:
+
 Learning-Based Prediction Models
 ---------------------------------
 
@@ -359,6 +373,10 @@ past information.
 
 **Challenge**: Vanilla RNNs struggle with long sequences due to vanishing gradients. This led to advanced architectures like LSTMs and GRUs.
 
+
+.. _l4-LSTMs_and_GRUs:
+
+
 LSTMs and GRUs
 """"""""""""""
 
@@ -373,6 +391,8 @@ hidden state :math:`h_t`; Decoder generates future predictions conditioned on :m
 - **Key Models**: Social LSTM [5]_, CS-LSTM [9]_, SR-LSTM [12]_.
 - **Limitations**: Sequential processing (slow), vanishing gradients, inferior to Transformers [17]_.
 - **Optimal Horizon**: 3-5 seconds for single-agent trajectory forecasting.
+
+.. _l4-graph_neural_networks:
 
 Graph Neural Networks (GNNs)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -389,6 +409,8 @@ neighbors to update its state and generate predictions.
 - **Key Innovation**: Attention mechanisms dynamically weight which agents and map features are most relevant [16]_.
 - **Advantages**: Explicitly models interactions, permutation invariant, scalable to many agents.
 - **Optimal Horizon**: 3-6 seconds for multi-agent interaction scenarios.
+
+.. _l4-transformers:
 
 Transformers
 ^^^^^^^^^^^^
@@ -412,6 +434,8 @@ most influence each target agent's future behavior [18]_, [21]_.
 - Captures long-range temporal dependencies
 - Dynamic attention focuses on relevant context
 - Handles variable-length sequences
+
+.. _l4-uncertainty_multimodal_prediction:
 
 Uncertainty and Multimodal Prediction
 --------------------------------------
@@ -454,6 +478,8 @@ Why Multimodality is Critical
 .. danger::
    **Critical Safety Principle**: Plan for all plausible futures, not just the most likely one.
 
+.. _l4-Representing_Multimodality:
+
 Representing Multimodality
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -473,6 +499,9 @@ The number K is chosen to balance coverage of plausible futures against computat
 
 Each mode is not a single deterministic trajectory, but rather a probability distribution representing uncertainty around that intent. A "straight" mode might have slight lateral variations, or different speeds within that behavior. This is often visualized as a "cone of uncertainty" that grows over the prediction horizon—narrow near the current time, widening as we predict further into the future.
 
+
+.. _l4-Quantifying_Uncertainty:
+
 Quantifying Uncertainty
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -488,8 +517,13 @@ Inherent randomness in human behavior. Even with perfect information, we cannot 
 
 Uncertainty due to model limitations or insufficient training data. This can be reduced with more data and better models, unlike aleatoric uncertainty.
 
+.. _l4-Technical_Approaches_to_Multimodal_Prediction:
+
 Technical Approaches to Multimodal Prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+.. _l4-mixture_modal_networks:
 
 Mixture Density Networks (MDNs)
 """"""""""""""""""""""""""""""""
@@ -509,6 +543,8 @@ MDNs output parameters of a probability distribution rather than single trajecto
 - Mixture weight :math:`\pi_k`: Probability of this mode (e.g., 0.40 for "straight")
 - Mean trajectory :math:`\mu_k`: Most likely path for this mode (sequence of future positions)
 - Covariance :math:`\Sigma_k`: Uncertainty around this trajectory (how much spread/variance)
+
+.. _l4-Conditional_Variational_Autoencoder:
 
 Conditional Variational Autoencoders (CVAEs)
 """""""""""""""""""""""""""""""""""""""""""""
@@ -548,6 +584,9 @@ appropriate anchors for the current scenario.
 - **Regression**: Offset corrections to refine each anchor trajectory (fine-tune the template)
 
 **Final Prediction**: Refined trajectories based on most probable anchors
+
+
+.. _l4-intent_inference:
 
 Intent Inference
 ----------------
@@ -594,6 +633,8 @@ The intent classifier examines multiple information sources to infer the driver'
 - Proximity to intersections, merge points, or exits
 - Presence of stop signs, traffic lights, or yield signs
 - Legal maneuvers available from current position
+
+.. _l4-Goal_Conditioned_Trajectory_Prediction:
 
 Goal-Conditioned Trajectory Prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -662,6 +703,9 @@ Predictions can only be as good as the underlying perception:
 
 **Solution**: Prediction systems should incorporate epistemic uncertainty estimates that increase when input quality is degraded, signaling to the planner to be more conservative.
 
+
+.. _l4-Evaluating_Prediction_Systems:
+
 Evaluating Prediction Systems
 ------------------------------
 
@@ -687,6 +731,10 @@ Percentage of predictions where all predicted modes are farther than a threshold
 **Negative Log-Likelihood (NLL)**
 
 Measures how well the predicted probability distribution assigns likelihood to the observed outcome. Properly rewards accurate uncertainty estimates.
+
+
+
+.. _l4-Challenges_in_Evaluation:
 
 Challenges in Evaluation
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -2,11 +2,24 @@
 CARLA Setup Guide - ROS 2 Humble (Native)
 ==================================================================
 
-:Course: ENPM818Z — On-Road Automated Vehicles
-:ROS Distribution: Humble Hawksbill
-:Ubuntu Version: 22.04 (Jammy Jellyfish)
-:CARLA Version: 0.9.16
-:Installation Method: Native (No Docker)
+.. list-table:: 
+   :widths: 40 60
+   :header-rows: 1
+   :class: compact-table
+
+
+   * - **Component**
+     - **Version/Details**
+   * - Course
+     - ENPM818Z — On-Road Automated Vehicles
+   * - ROS Distribution
+     - Humble Hawksbill
+   * - Ubuntu Version
+     - 22.04 (Jammy Jellyfish)
+   * - CARLA Version
+     - 0.9.16
+   * - Installation Method
+     - Native (No Docker)
 
 ---------------------------------------------------------
 Overview
@@ -345,7 +358,7 @@ Basic Workflow
 
 .. code-block:: bash
 
-   carla
+   carla # this is the alias from carla_setup()
 
 Wait for the CARLA window to open and the world to load (~30 seconds).
 

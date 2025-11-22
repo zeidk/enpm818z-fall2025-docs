@@ -11,14 +11,16 @@ Assignment 2
 :Total Points: 30 pts
 :Language: Python (ROS 2, Open3D)
 
+.. admonition:: Resources
+   :class: resources
 
-.. note::
-  Provided resource:
 
-  - Demonstration of the output: `location <https://drive.google.com/file/d/1iegtrsupj4XY0SIrvhmpgWKO9CifDmY9/view?usp=sharing>`_.
-  - Two pre-recorded bag files: `location <https://drive.google.com/drive/folders/1ni7jXjCE8NncyLBbYpta3CpqVkbWhFDU?usp=sharing>`_.
-  - Starter package: `location <https://github.com/zeidk/enpm818Z-fall-2025/tree/main/rwa2_starter>`_.
+   - 🔗 `Google Drive <https://drive.google.com/drive/folders/1ni7jXjCE8NncyLBbYpta3CpqVkbWhFDU?usp=sharing>`_:
+   
+    - Demonstration of the output
+    - Two pre-recorded bag files (humble and jazzy)
 
+   - 🔗 `Starter package <https://github.com/zeidk/enpm818Z-fall-2025/tree/main/rwa2_starter>`_
 
 ---------------------------------------------------------
 1. Objective
@@ -30,9 +32,6 @@ Build a simplified **LiDAR odometry pipeline** that estimates vehicle trajectory
 - **Local Map Management** – Maintain a sliding window of recent keyframes as the registration reference
 
 You will be provided with helper utilities and a complete starter package. Your task is to implement the **core SLAM logic** in two ROS 2 nodes.
-
-.. note::
-  
 
 ---------------------------------------------------------
 2. Background
@@ -85,14 +84,14 @@ ROS 2 Bag Files Provided
 
 
 
-1. **Development Dataset** (``kitti_00_dev``) — First 1,000 frames
+1. **Development Dataset** (``kitti_00_dev_humble.zip`` or ``kitti_00_dev_jazzy.zip``) — First 1,000 frames
    
    - Use this for 90% of your development and testing
    - Faster iteration, easier debugging
    - Covers ~1.6 km (highway and urban transition)
    - Duration: ~100 seconds
 
-2. **Full Dataset** (``kitti_00_full``) — Complete 4,541 frames
+2. **Full Dataset** (``kitti_00_full_humble.zip`` or ``kitti_00_full_jazzy.zip``) — Complete 4,541 frames
    
    - Use for final testing before submission
    - Shows long-term behavior and drift accumulation
@@ -262,7 +261,7 @@ Node 1 — odometry_estimator_node
       INPUT: cloud_msg (PointCloud2), :math:`T_{\text{current}}` (from class member)
       
       1) keyframe.cloud ← cloud_msg  // Attach original point cloud
-      2) keyframe.pose ← transform_to_pose(:math:`T_{\text{current}}`)  // Convert 4×4 matrix to ROS Pose
+      2) keyframe.pose ← transform_to_pose(:math:`T_{\text{current}}`)  // Convert 4x4 matrix to ROS Pose
       3) publish(keyframe_topic, keyframe)  // Send to /slam/new_keyframe
       4) :math:`T_{\text{last\_kf}} \leftarrow T_{\text{current}}`  // Update keyframe reference
       5) keyframe_count ← keyframe_count + 1  // Increment counter

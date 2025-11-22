@@ -2,11 +2,24 @@
 CARLA Setup Guide - ROS 2 Jazzy (Docker)
 ==================================================================
 
-:Course: ENPM818Z — On-Road Automated Vehicles
-:ROS Distribution: Jazzy Jalisco
-:Ubuntu Version: 24.04 (Noble Numbat)
-:CARLA Version: 0.9.16
-:Installation Method: Docker
+.. list-table::
+   :widths: 40 60
+   :header-rows: 1
+   :class: compact-table
+   
+
+   * - **Component**
+     - **Version/Details**
+   * - Course
+     - ENPM818Z — On-Road Automated Vehicles
+   * - ROS Distribution
+     - Jazzy Jalisco
+   * - Ubuntu Version
+     - 24.04 (Noble Numbat)
+   * - CARLA Version
+     - 0.9.16
+   * - Installation Method
+     - Docker 🐳
 
 ---------------------------------------------------------
 Overview
@@ -14,7 +27,7 @@ Overview
 
 This guide walks you through setting up CARLA 0.9.16 with ROS 2 Jazzy using Docker. You will use a **custom ROS 2 bridge package** that bypasses CARLA's native ROS 2 implementation due to a known bug (see :ref:`known-issue`).
 
-**What You'll Install:**
+**What You will Install:**
 
 - Docker runtime with NVIDIA GPU support
 - CARLA 0.9.16 Docker image
@@ -79,7 +92,13 @@ Step 2: Install Additional Dependencies
 .. code-block:: bash
 
    # Install required Python packages
-   pip3 install numpy pygame carla==0.9.16
+   pip3 install numpy pygame
+   
+   # Install CARLA Python client
+   pip3 install carla==0.9.16
+   
+   # Verify installations
+   python3 -c "import numpy; import pygame; import carla; print('All dependencies OK')"
 
 ---------------------------------------------------------
 Step 3: Clone and Build ROS 2 Bridge Package
