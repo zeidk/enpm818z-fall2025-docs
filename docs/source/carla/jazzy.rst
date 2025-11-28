@@ -83,7 +83,7 @@ Expected output:
 
 .. code-block:: text
 
-   carlasim/carla   0.9.16   <image-id>   <date>   ~7GB
+   carlasim/carla:0.9.16             98d224668ad0       20.7GB             0B 
 
 ---------------------------------------------------------
 Step 2: Install Additional Dependencies
@@ -149,6 +149,7 @@ Expected output:
 
    carla_ros2_bridge carla_bridge
    carla_ros2_bridge carla_camera_publisher
+   carla_ros2_bridge carla_camera_publisher_with_display
    carla_ros2_bridge carla_image_subscriber
 
 ---------------------------------------------------------
@@ -160,12 +161,11 @@ Create a setup function that configures your environment for CARLA and ROS 2.
 Create Setup Script
 ~~~~~~~~~~~~~~~~~~~
 
+
 Add the following function to your ``~/.bashrc``:
 
-.. code-block:: bash
 
-   # Open bashrc
-   nano ~/.bashrc
+.. code-block:: bash
 
    # Add this function at the end:
    carla_setup() {
