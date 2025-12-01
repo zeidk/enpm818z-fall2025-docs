@@ -10,3 +10,5 @@ List of assignments
    :maxdepth: 2
 
    rwaII
+   rwaIII
+   final_project

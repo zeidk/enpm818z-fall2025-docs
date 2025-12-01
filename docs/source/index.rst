@@ -65,11 +65,12 @@ Assignments and Evaluation
 
 Late submissions incur a 10% deduction per day (maximum 3 days). Beyond 3 days, submissions receive zero credit.
 
+
 .. toctree::
    :maxdepth: 2
    :titlesonly:
 
-   lectures/lectures
-   assignments/assignments
+   lectures/index
+   assignments/index
    carla/carla
 

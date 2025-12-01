@@ -9,7 +9,7 @@ This site accompanies *ENPM818Z - Lecture 4: Trajectory Prediction for Automated
    :class: resources
 
 
-   - 🔗 `Lecture 4 slides (v1.0) <https://drive.google.com/file/d/1KMSkZt5qy9PLPnDXkWwUQea9bnF365zr/view?usp=sharing>`_
+   🔗 `Lecture 4 slides (v1.0) <https://drive.google.com/file/d/1KMSkZt5qy9PLPnDXkWwUQea9bnF365zr/view?usp=sharing>`_
 
 
 Overview
@@ -924,7 +924,7 @@ After completing this exercise, you should understand:
 
 **Connection to Course**: Intent inference is easier than full trajectory prediction, but still challenging - motivating the learning-based methods we've discussed today.
 
-Gloassary
+Glossary
 ----------
 
 .. toctree::
