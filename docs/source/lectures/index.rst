@@ -9,3 +9,4 @@ Each lecture builds upon the previous one to form a complete understanding of th
    :titlesonly:
 
    lecture4/lecture4
+   lecture5/lecture5

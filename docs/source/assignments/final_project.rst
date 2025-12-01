@@ -14,7 +14,7 @@ Final Project
 .. admonition:: Resources
    :class: resources
 
-   - 🔗 `Starter package <https://github.com/zeidk/enpm818Z-fall-2025/tree/main/final_project_starter>`_
+   - 🔗 `Starter package <https://github.com/zeidk/enpm818Z-fall-2025/tree/main/rwa3_final_starter>`_
    
    - 📖 Lecture Materials: L6 (Trajectory Planning)
    
@@ -981,6 +981,13 @@ Step 5: Parameter Tuning
    │   └── planner_config.yaml          # Configuration parameters
    └── requirements.txt                 # Python dependencies
 
+
+.. note::
+
+   **LLM Help:**
+   
+   Most of the CARLA scripts were generated using an LLM (claude.ai) and modified by the instructor
+   
 
 **Files you modify:**
 

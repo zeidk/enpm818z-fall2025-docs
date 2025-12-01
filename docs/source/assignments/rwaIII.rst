@@ -14,7 +14,7 @@ Assignment 3
 .. admonition:: Resources
    :class: resources
 
-   - 🔗 `Starter package <https://github.com/zeidk/enpm818Z-fall-2025/tree/main/rwa3_starter>`_
+   - 🔗 `Starter package <https://github.com/zeidk/enpm818Z-fall-2025/tree/main/rwa3_final_starter>`_
    
    - 📖 Lecture Materials: L5 (Behavioral Planning - Behavior Trees)
    
@@ -823,6 +823,12 @@ Step 6: Integration Testing
    ├── config/
    │   └── planner_config.yaml          # Configuration parameters
    └── requirements.txt                 # Python dependencies
+
+.. note::
+
+   **LLM Help:**
+   
+   Most of the CARLA scripts were generated using an LLM (claude.ai) and modified by the instructor
 
 **Files you modify:**
 
