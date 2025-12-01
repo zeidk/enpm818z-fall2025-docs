@@ -304,7 +304,7 @@ Implement the following helper functions that will be used by your condition nod
    
       a. **if** :math:`obs.lane\_id \neq ego.lane\_id` **then continue**
       
-      b. :math:`d_{long} \gets \text{compute\_longitudinal\_distance}(ego, obs)`
+      b. :math:`d_{long} \gets \text{compute_longitudinal_distance}(ego, obs)`
       
       c. **if** :math:`d_{long} > 0` **and** :math:`d_{long} < min\_dist` **then**
       
@@ -350,7 +350,7 @@ Implement the following helper functions that will be used by your condition nod
    
       a. **if** :math:`obs.lane\_id \neq target\_lane` **then continue**
       
-      b. :math:`d_{long} \gets \text{compute\_longitudinal\_distance}(ego, obs)`
+      b. :math:`d_{long} \gets \text{compute_longitudinal_distance}(ego, obs)`
       
       c. **if** :math:`|d_{long}| < min\_gap` **then return** False
    
@@ -388,7 +388,7 @@ Implement the ``evaluate()`` method for each condition node. Each method receive
       
       c. **if** :math:`v_{obs} > 0.5` **then continue** (not stationary)
       
-      d. :math:`d_{long} \gets \text{compute\_longitudinal\_distance}(ego, obs)`
+      d. :math:`d_{long} \gets \text{compute_longitudinal_distance}(ego, obs)`
       
       e. **if** :math:`d_{long} > 0` **and** :math:`d_{long} < d_{stop}` **then return** True
    
@@ -404,7 +404,7 @@ Implement the ``evaluate()`` method for each condition node. Each method receive
    
    **Output:** True if any vehicle is ahead in the same lane
 
-   1. :math:`lead \gets \text{get\_lead\_vehicle}(bb.ego\_state, bb.obstacles)`
+   1. :math:`lead \gets \text{get_lead_vehicle}(bb.ego\_state, bb.obstacles)`
    
    2. **return** :math:`lead \neq \text{None}`
 
@@ -418,13 +418,13 @@ Implement the ``evaluate()`` method for each condition node. Each method receive
    
    **Output:** True if distance to lead vehicle is less than safe following distance
 
-   1. :math:`lead \gets \text{get\_lead\_vehicle}(bb.ego\_state, bb.obstacles)`
+   1. :math:`lead \gets \text{get_lead_vehicle}(bb.ego\_state, bb.obstacles)`
    
    2. **if** :math:`lead = \text{None}` **then return** False
    
    3. :math:`d_{safe} \gets bb.config['safe\_follow\_distance']`
    
-   4. :math:`dist \gets \text{compute\_longitudinal\_distance}(bb.ego\_state, lead)`
+   4. :math:`dist \gets \text{compute_longitudinal_distance}(bb.ego\_state, lead)`
    
    5. **return** :math:`dist < d_{safe}`
 
@@ -446,7 +446,7 @@ Implement the ``evaluate()`` method for each condition node. Each method receive
    
       a. **return** True (route requires different lane)
    
-   4. :math:`lead \gets \text{get\_lead\_vehicle}(ego, bb.obstacles)`
+   4. :math:`lead \gets \text{get_lead_vehicle}(ego, bb.obstacles)`
    
    5. **if** :math:`lead \neq \text{None}` **then**
    
@@ -484,7 +484,7 @@ Implement the ``evaluate()`` method for each condition node. Each method receive
    
    5. :math:`bb.set('target\_lane\_for\_change', target)`
    
-   6. **return** :math:`\text{check\_gap\_in\_lane}(ego, bb.obstacles, target, min\_gap)`
+   6. **return** :math:`\text{check_gap_in_lane}(ego, bb.obstacles, target, min\_gap)`
 
 
 Task 3: Implement Action Nodes
@@ -534,7 +534,7 @@ Implement the ``execute()`` method for each action node. Each method receives th
    
    3. :math:`cmd \gets \text{BehavioralCommand}()`
    
-   4. :math:`cmd.maneuver \gets \text{'lane\_keep'}`
+   4. :math:`cmd.maneuver \gets \text{'lane_keep'}`
    
    5. :math:`cmd.target\_lane \gets ego.lane\_id`
    
@@ -556,7 +556,7 @@ Implement the ``execute()`` method for each action node. Each method receives th
 
    1. :math:`ego \gets bb.ego\_state`
    
-   2. :math:`lead \gets \text{get\_lead\_vehicle}(ego, bb.obstacles)`
+   2. :math:`lead \gets \text{get_lead_vehicle}(ego, bb.obstacles)`
    
    3. **if** :math:`lead \neq \text{None}` **then**
    
@@ -602,9 +602,9 @@ Implement the ``execute()`` method for each action node. Each method receives th
    
    4. :math:`target \gets bb.get('lane\_change\_target')`
    
-   5. **if** :math:`target > ego.lane\_id` **then** :math:`maneuver \gets \text{'lane\_change\_left'}`
+   5. **if** :math:`target > ego.lane\_id` **then** :math:`maneuver \gets \text{'lane_change_left'}`
    
-   6. **else** :math:`maneuver \gets \text{'lane\_change\_right'}`
+   6. **else** :math:`maneuver \gets \text{'lane_change_right'}`
    
    7. :math:`cmd \gets \text{BehavioralCommand}()`
    
