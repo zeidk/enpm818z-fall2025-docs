@@ -21,8 +21,8 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
+    'sphinxcontrib.video'
 ]
-
 
 # Prerender options for better performance
 katex_prerender = True
