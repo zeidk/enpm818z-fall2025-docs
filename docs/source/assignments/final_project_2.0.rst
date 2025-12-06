@@ -7,7 +7,7 @@ Final Project
 :Course: ENPM818Z — On-Road Automated Vehicles
 :Topic: L6 — Trajectory Planning
 :Assigned: December 1, 2025
-:Due: December 12, 2025
+:Due: December 13, 2025
 :Total Points: 60 pts (+15 bonus)
 :Language: Python
 
@@ -120,7 +120,7 @@ The final project integrates with RWA3 to create a complete planning system:
       :width: 90%
       :class: only-dark
 
-      
+
 Data Flow Summary
 ~~~~~~~~~~~~~~~~~~
 
