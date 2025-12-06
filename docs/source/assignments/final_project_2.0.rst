@@ -20,6 +20,20 @@ Final Project
 
 .. admonition:: Changelog
 
+   **Version 2.2.0** (2025-12-05)
+
+   - Updated visualizer with behavior summary and polynomial coefficients panels
+   - Added "Return to Center" behavior for proper lane change display
+   - Improved trajectory planning parameters for smoother motion
+   - Added behavior summary display at end of simulation
+   - Fixed follow scenario vehicle spacing
+
+   **Version 2.1.0** (2025-12-05)
+
+   - Added detailed RWA3 integration instructions
+   - Added evaluation guide for standalone and CARLA modes
+   - Clarified file dependencies and module connections
+
    **Version 2.0.0** (2025-12-01)
 
    - Refactored to use standalone simulator (no CARLA dependency)
@@ -36,13 +50,11 @@ Final Project
 
    **Project Structure:**
    
-   This final project focuses on **Trajectory Planning** using Frenet coordinates and polynomial trajectories (Part 2 of the Planning Stack). This builds upon **Assignment 3** (Behavioral Planning with Behavior Trees). Together, these implement a complete hierarchical planning system for autonomous driving.
-   
-   **Prerequisite:** You must have completed Assignment 3 (Behavioral Planner) before starting this project.
+   This final project focuses on **Trajectory Planning** using Frenet coordinates and polynomial trajectories (Part 2 of the Planning Stack). The behavioral planner from **Assignment 3** is included in the starter package, creating a complete hierarchical planning system for autonomous driving.
    
    **Simulator Options:**
    
-   - **Primary:** Standalone Python simulator with matplotlib visualization
+   - **Primary:** Standalone Python simulator with matplotlib visualization (60 pts)
    - **Bonus (+15 pts):** CARLA integration for realistic 3D visualization
 
 ---------------------------------------------------------
@@ -57,7 +69,6 @@ Implement a **trajectory planner** that generates smooth, collision-free traject
 - Generate polynomial trajectories that satisfy boundary conditions
 - Design and tune cost functions for trajectory evaluation
 - Implement feasibility checking for vehicle dynamic constraints
-- Implement collision checking with dynamic obstacles
 - Test and validate trajectory planning in simulation
 
 ---------------------------------------------------------
@@ -86,720 +97,926 @@ We use polynomial functions to represent motion over time:
 
 The planner generates multiple candidate trajectories by sampling different end states (target lateral position, velocity, duration). Each candidate is evaluated for feasibility (dynamic constraints) and cost (smoothness, efficiency, safety). The lowest-cost feasible trajectory is selected.
 
-**Why This Matters:**
-
-This approach, known as the "Frenet Optimal Trajectory" method, is widely used in autonomous driving systems. It provides a principled way to generate smooth, safe trajectories that respect vehicle dynamics and avoid obstacles.
-
 ---------------------------------------------------------
 3. System Architecture
 ---------------------------------------------------------
 
-The trajectory planner receives commands from the behavioral planner and outputs trajectories for vehicle control.
+Complete Planning Stack
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-Data Flow
-~~~~~~~~~
+The final project integrates with RWA3 to create a complete planning system:
+
+.. only:: html
+
+   .. figure:: /_static/final/final_stack_light.png
+      :alt: Final project stack
+      :align: center
+      :width: 90%
+      :class: only-light
+
+   .. figure:: /_static/final/final_stack_dark.png
+      :alt: Final project stack
+      :align: center
+      :width: 90%
+      :class: only-dark
+
+      
+Data Flow Summary
+~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :widths: 20 35 45
+   :header-rows: 1
+   :class: compact-table
+
+   * - **Stage**
+     - **Input**
+     - **Output**
+   * - Perception
+     - Raw sensor data
+     - ``EnvironmentState``
+   * - Behavioral Planning (RWA3)
+     - ``EnvironmentState``
+     - ``BehaviorCommand``
+   * - Trajectory Planning (Final Project)
+     - ``BehaviorCommand`` + current state
+     - ``Trajectory``
+   * - Control
+     - ``Trajectory``
+     - Steering, throttle, brake
+
+---------------------------------------------------------
+4. Integrating RWA3 with Final Project
+---------------------------------------------------------
+
+This section explains exactly how to connect your RWA3 behavioral planner to the final project trajectory planner.
+
+Required Files from RWA3
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copy these files from your completed RWA3 solution into the final project folder:
 
 .. list-table::
    :widths: 25 75
    :header-rows: 1
    :class: compact-table
 
-   * - **Module**
-     - **Description**
-   * - **Simulator (Provided)**
-     - Provides reference path, ego state, and traffic vehicles
-   * - **Behavioral Planner (From RWA3)**
-     - Outputs ``BehaviorCommand`` with maneuver type and targets
-   * - **Trajectory Planner (You Implement)**
-     - Generates smooth, collision-free trajectory
-   * - **Visualization (Provided)**
-     - Real-time display of trajectories and vehicle motion
+   * - **File**
+     - **Purpose**
+   * - ``bt_framework.py``
+     - Base classes (Node, Sequence, Selector, Status, blackboard)
+   * - ``bt_nodes.py``
+     - Your implemented condition/action nodes
+   * - ``behavior_tree.py``
+     - Your ``BehaviorPlanner`` class with ``_build_tree()``
 
-What You Receive vs. Implement
+Step-by-Step Integration
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Step 1: Copy RWA3 Files**
+
+.. code-block:: bash
+
+   # From your RWA3 solution directory
+   cp bt_framework.py bt_nodes.py behavior_tree.py /path/to/final_project/
+
+**Step 2: Verify File Structure**
+
+Your final project folder should contain:
+
+.. code-block:: text
+
+   final_project/
+   ├── bt_framework.py           # From RWA3
+   ├── bt_nodes.py               # From RWA3 (your implementation)
+   ├── behavior_tree.py          # From RWA3 (your implementation)
+   ├── frenet.py                 # TODO: Implement
+   ├── polynomial.py             # TODO: Implement
+   ├── cost.py                   # TODO: Implement
+   ├── simulator.py              # Provided
+   ├── visualizer.py             # Provided
+   ├── test_frenet.py            # Provided
+   ├── test_polynomial.py        # Provided
+   ├── test_cost.py              # Provided
+   └── requirements.txt          # Provided
+
+**Step 3: Verify RWA3 Integration**
+
+Run this test to ensure your behavioral planner works:
+
+.. code-block:: bash
+
+   # Test behavioral planner standalone
+   python3 -c "
+   from behavior_tree import BehaviorPlanner
+   from bt_framework import EnvironmentState
+   
+   planner = BehaviorPlanner()
+   env = EnvironmentState()
+   env.ego_speed = 25.0
+   env.speed_limit = 31.0
+   env.vehicle_ahead = False
+   
+   cmd = planner.get_command(env)
+   print(f'Behavior: {cmd.behavior.value}')
+   print(f'Target d: {cmd.target_d}')
+   print(f'Target speed: {cmd.target_speed}')
+   "
+
+Expected output:
+
+.. code-block:: text
+
+   Behavior: lane_keep
+   Target d: 0.0
+   Target speed: 31.0
+
+How the Integration Works
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``simulator.py`` file orchestrates the integration:
+
+.. code-block:: python
+
+   # In simulator.py - main loop
+   
+   from behavior_tree import BehaviorPlanner
+   from frenet import cartesian_to_frenet, frenet_to_cartesian
+   from polynomial import generate_candidate_trajectories
+   from cost import select_best_trajectory
+   
+   # Initialize
+   sim = Simulator()
+   planner = BehaviorPlanner()  # Your RWA3 implementation
+   
+   while running:
+       # 1. Get environment state (from simulator)
+       env = sim.get_environment_state()
+       
+       # 2. Behavioral planning (YOUR RWA3 CODE)
+       command = planner.get_command(env)
+       # Returns: BehaviorCommand(behavior, target_d, target_speed, T)
+       
+       # 3. Trajectory planning (YOUR FINAL PROJECT CODE)
+       # Convert current state to Frenet
+       s, d = cartesian_to_frenet(ego.x, ego.y, ref_path)
+       
+       # Generate candidate trajectories
+       candidates = generate_candidate_trajectories(
+           current_state={'s': s, 'd': d, 's_dot': ego.speed, ...},
+           target_d=command.target_d,
+           target_speed=command.target_speed,
+           T_base=command.T
+       )
+       
+       # Select best trajectory
+       best = select_best_trajectory(candidates, target_d, target_speed)
+       
+       # 4. Execute trajectory
+       sim.step(command)  # Updates ego position along trajectory
+
+Key Interface: BehaviorCommand
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. list-table::
-   :widths: 40 15 15
-   :header-rows: 1
-   :class: compact-table
-
-   * - **Module**
-     - **Provided**
-     - **You Implement**
-   * - Simulator (``simulator.py``)
-     - ✓
-     - 
-   * - Behavior Tree (``behavior_tree.py``)
-     - 
-     - ✓ (From RWA3)
-   * - Frenet Transform (``frenet.py``)
-     - 
-     - ✓ (This Project)
-   * - Polynomial Trajectory (``polynomial.py``)
-     - 
-     - ✓ (This Project)
-   * - Cost Function (``cost.py``)
-     - 
-     - ✓ (This Project)
-   * - Visualization (``visualizer.py``)
-     - ✓
-     - 
-   * - Unit Tests (``test_*.py``)
-     - ✓
-     - 
-
-
-Key Interfaces
-~~~~~~~~~~~~~~
-
-**Behavioral Planner → Trajectory Planner:**
+The ``BehaviorCommand`` from RWA3 drives trajectory generation:
 
 .. code-block:: python
 
    @dataclass
    class BehaviorCommand:
-       behavior: BehaviorType     # LANE_KEEP, FOLLOW_VEHICLE, LANE_CHANGE_LEFT, etc.
-       target_d: float            # Target lateral offset (m)
+       behavior: BehaviorType     # What maneuver to execute
+       target_d: float            # Target lateral offset (meters)
        target_speed: float        # Target speed (m/s)
-       T: float                   # Planning horizon (s)
+       T: float                   # Planning horizon (seconds)
 
-**Trajectory Planner Output:**
+**How each behavior maps to trajectory parameters:**
+
+.. list-table::
+   :widths: 25 20 20 35
+   :header-rows: 1
+   :class: compact-table
+
+   * - **Behavior**
+     - **target_d**
+     - **target_speed**
+     - **Trajectory Effect**
+   * - ``LANE_KEEP``
+     - 0.0
+     - speed_limit
+     - Stay centered, cruise at limit
+   * - ``FOLLOW_VEHICLE``
+     - 0.0
+     - lead_speed - 1
+     - Stay centered, match lead speed
+   * - ``LANE_CHANGE_LEFT``
+     - +lane_width
+     - speed_limit
+     - Move left one lane width
+   * - ``LANE_CHANGE_RIGHT``
+     - -lane_width
+     - speed_limit
+     - Move right one lane width
+
+---------------------------------------------------------
+5. What You Implement
+---------------------------------------------------------
+
+You must implement three Python modules for trajectory planning.
+
+frenet.py (15 pts)
+~~~~~~~~~~~~~~~~~~~
+
+**cartesian_to_frenet** — Convert (x, y) to (s, d):
 
 .. code-block:: python
 
-   @dataclass
-   class TrajectoryState:
-       t: float      # Time (seconds)
-       s: float      # Longitudinal position (meters)
-       d: float      # Lateral position (meters)
-       s_dot: float  # Longitudinal velocity (m/s)
-       d_dot: float  # Lateral velocity (m/s)
-       s_ddot: float # Longitudinal acceleration (m/s²)
-       d_ddot: float # Lateral acceleration (m/s²)
+   def cartesian_to_frenet(x: float, y: float, ref_path: ReferencePath) -> Tuple[float, float]:
+       """
+       Algorithm:
+       1. Find closest point on reference path (minimize distance)
+       2. Get arc length s at that point
+       3. Compute d as dot product of offset vector with normal
+       4. Return (s, d)
+       """
+
+**frenet_to_cartesian** — Convert (s, d) to (x, y):
+
+.. code-block:: python
+
+   def frenet_to_cartesian(s: float, d: float, ref_path: ReferencePath) -> Tuple[float, float]:
+       """
+       Algorithm:
+       1. Find position on path at arc length s (interpolate if needed)
+       2. Get normal vector at that position
+       3. Compute x = path_x + d * normal_x
+       4. Compute y = path_y + d * normal_y
+       5. Return (x, y)
+       """
+
+polynomial.py (15 pts)
+~~~~~~~~~~~~~~~~~~~~~~~
+
+**quintic_coefficients** — Compute 6 coefficients for lateral trajectory:
+
+.. code-block:: python
+
+   def quintic_coefficients(start, end, T) -> np.ndarray:
+       """
+       Quintic: p(t) = a0 + a1*t + a2*t² + a3*t³ + a4*t⁴ + a5*t⁵
+       
+       Boundary conditions:
+       - p(0) = p0, p'(0) = v0, p''(0) = a0
+       - p(T) = pf, p'(T) = vf, p''(T) = af
+       
+       Returns [a0, a1, a2, a3, a4, a5]
+       """
+
+**quartic_coefficients** — Compute 5 coefficients for longitudinal trajectory:
+
+.. code-block:: python
+
+   def quartic_coefficients(start, end_vel, T) -> np.ndarray:
+       """
+       Quartic: p(t) = a0 + a1*t + a2*t² + a3*t³ + a4*t⁴
+       
+       Boundary conditions (position-free at end):
+       - p(0) = p0, p'(0) = v0, p''(0) = a0
+       - p'(T) = vf, p''(T) = af
+       
+       Returns [a0, a1, a2, a3, a4]
+       """
+
+**evaluate_polynomial** — Evaluate polynomial and derivatives:
+
+.. code-block:: python
+
+   def evaluate_polynomial(coeffs, t) -> Tuple[float, float, float]:
+       """Returns (position, velocity, acceleration) at time t."""
+
+**generate_trajectory** — Sample polynomial to create trajectory:
+
+.. code-block:: python
+
+   def generate_trajectory(d_coeffs, s_coeffs, T, dt) -> Trajectory:
+       """Sample polynomials at dt intervals, return Trajectory object."""
+
+cost.py (15 pts)
+~~~~~~~~~~~~~~~~~
+
+**compute_total_cost** — Evaluate trajectory quality:
+
+.. code-block:: python
+
+   def compute_total_cost(traj, target_d, target_speed, weights) -> float:
+       """
+       Cost = w_jerk * J_jerk + w_time * T + w_d * (d_final - target_d)² 
+            + w_v * (v_final - target_v)² + w_accel * J_accel
+       """
+
+**check_feasibility** — Verify vehicle constraints:
+
+.. code-block:: python
+
+   def check_feasibility(traj, limits) -> bool:
+       """
+       Check all states satisfy:
+       - 0 <= velocity <= max_velocity
+       - max_decel <= acceleration <= max_accel
+       - |lateral_accel| <= max_lateral_accel
+       - |jerk| <= max_jerk
+       """
+
+**select_best_trajectory** — Choose optimal trajectory:
+
+.. code-block:: python
+
+   def select_best_trajectory(candidates, target_d, target_speed) -> Trajectory:
+       """Return lowest-cost feasible trajectory, or None."""
+
+---------------------------------------------------------
+6. Evaluation: Standalone Simulator (60 pts)
+---------------------------------------------------------
+
+This section covers how to test and evaluate your implementation using the standalone Python simulator.
+
+Running Unit Tests
+~~~~~~~~~~~~~~~~~~~
+
+Test each module individually before running the full simulation:
+
+.. code-block:: bash
+
+   # Navigate to your project folder
+   cd final_project/
    
-   @dataclass
-   class Trajectory:
-       states: List[TrajectoryState]  # Sequence of states
-       T: float                        # Total duration
-       cost: float                     # Total cost
-       feasible: bool                  # Passed constraint checks
+   # Test Frenet transformations (6 tests)
+   python3 test_frenet.py
+   
+   # Test polynomial generation (9 tests)
+   python3 test_polynomial.py
+   
+   # Test cost functions (9 tests)
+   python3 test_cost.py
+
+**Expected output for each:**
+
+.. code-block:: text
+
+   ============================================================
+   RESULTS: X passed, 0 failed
+   ============================================================
+   
+   ✅ All tests passed!
+
+Running Module Self-Tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each implementation file has built-in tests that you can run directly:
+
+.. code-block:: bash
+
+   # Test frenet.py implementation
+   python3 frenet.py
+
+**frenet.py** tests Frenet coordinate transformations:
+
+- Creates a straight reference path (100m)
+- Tests ``cartesian_to_frenet()`` with points on, left, and right of centerline
+- Tests ``frenet_to_cartesian()`` for inverse transformation
+- Verifies roundtrip accuracy (Cartesian → Frenet → Cartesian < 0.5m error)
+
+**Expected output:**
+
+.. code-block:: text
+
+   Testing Frenet Coordinate Transformation...
+
+   1. Testing with straight path (x = 0 to 100):
+      Path length: 100.0m
+      Number of waypoints: 11
+
+      Point on centerline: (50.0, 0.0)
+      Frenet: s=50.0m, d=0.00m
+      Expected: s=50.0, d=0.0 ✓
+
+      Point left of centerline: (50.0, 3.5)
+      Frenet: s=50.0m, d=3.50m
+      Expected: s=50.0, d=3.5 ✓
+
+      Point right of centerline: (50.0, -3.5)
+      Frenet: s=50.0m, d=-3.50m
+      Expected: s=50.0, d=-3.5 ✓
+
+   2. Testing frenet_to_cartesian:
+      Frenet: s=50.0, d=0.0
+      Cartesian: (50.0, 0.0)
+      Expected: (50.0, 0.0) ✓
+
+      Frenet: s=50.0, d=3.5
+      Cartesian: (50.0, 3.5)
+      Expected: (50.0, 3.5) ✓
+
+   3. Testing roundtrip accuracy:
+      (25.0, 1.5) -> (s=25.0, d=1.50) -> (25.0, 1.5), error=0.000m ✓
+      (50.0, -2.0) -> (s=50.0, d=-2.00) -> (50.0, -2.0), error=0.000m ✓
+      (75.0, 3.0) -> (s=75.0, d=3.00) -> (75.0, 3.0), error=0.000m ✓
+
+      Maximum roundtrip error: 0.000m
+      Requirement: < 0.5m ✓
+
+   ==================================================
+   All tests complete.
+
+.. code-block:: bash
+
+   # Test polynomial.py implementation
+   python3 polynomial.py
+
+**polynomial.py** tests polynomial trajectory generation:
+
+- Tests ``quintic_coefficients()`` for lane change (d: 0→3.5m in 4s)
+- Verifies all 6 boundary conditions (position, velocity, acceleration at start/end)
+- Tests ``quartic_coefficients()`` for speed change (v: 20→25 m/s in 3s)
+- Verifies all 5 boundary conditions
+- Tests ``generate_trajectory()`` creates proper state sequences
+
+**Expected output:**
+
+.. code-block:: text
+
+   Testing Polynomial Trajectory Generation...
+
+   1. Quintic polynomial (lateral trajectory)
+      Lane change: d=0 to d=3.5m in T=4s
+      Coefficients: [ 0.       0.       0.       0.546875 -0.205...  0.0205...]
+      At t=0: p=0.000, v=0.000, a=0.000
+      At t=T: p=3.500, v=-0.000, a=0.000
+      Boundary conditions: ✓
+
+   2. Quartic polynomial (longitudinal trajectory)
+      Speed up: v=20 to v=25 m/s in T=3s
+      Coefficients: [ 0.      20.       0.       0.5556  -0.0926]
+      At t=0: s=0.000, v=20.000, a=0.000
+      At t=T: s=67.500, v=25.000, a=0.000
+      Boundary conditions: ✓
+
+   3. Full trajectory generation
+      Generated 9 states:
+        t=0.0: s=0.00m, d=0.00m, v=20.00m/s
+        t=0.5: s=10.06m, d=0.06m, v=20.37m/s
+        t=1.0: s=20.46m, d=0.36m, v=21.30m/s
+        ...
+        t=4.0: s=91.85m, d=3.50m, v=22.96m/s
+
+   4. Candidate trajectory generation
+      Generated 125 candidate trajectories
+
+   ==================================================
+   All tests complete.
+
+.. code-block:: bash
+
+   # Test cost.py implementation
+   python3 cost.py
+
+**cost.py** tests cost function and feasibility checking:
+
+- Creates a test trajectory using your polynomial implementation
+- Tests ``check_feasibility()`` with normal and strict limits
+- Tests ``compute_total_cost()`` with matching and different targets
+- Tests ``select_best_trajectory()`` from candidate set
+- Verifies correct handling when no feasible trajectory exists
+
+**Expected output:**
+
+.. code-block:: text
+
+   Testing Cost Function and Feasibility...
+
+   1. Creating test trajectory (lane change):
+      Duration: 4.0s
+      States: 41
+      Final d: 3.50m
+      Final v: 25.00m/s
+
+   2. Testing feasibility checking:
+      Default limits: ✓ Feasible
+      Strict limits (v<20): ✗ Infeasible (expected)
+
+   3. Testing cost computation:
+      Cost (matching targets): 17.02
+      Cost (different targets): 54.27
+      Off-target cost should be higher: ✓
+
+   4. Testing trajectory selection:
+      Generated 125 candidates
+      Best trajectory:
+        Duration: 5.0s
+        Final d: 3.00m
+        Final v: 25.00m/s
+        Cost: 8.77
+      ✓ Selection working
+
+   ==================================================
+   All tests complete.
+
+Running Simulation Scenarios
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+After all unit tests pass, run the full integrated simulation:
+
+**Scenario 1: Empty Road (Lane Keeping)**
+
+.. code-block:: bash
+
+   # With visualization
+   python3 simulator.py --scenario empty
+   
+   # Without visualization (text output)
+   python3 simulator.py --scenario empty --no-viz --duration 20
+
+**Demo:**
+
+
+.. video:: /_static/final/frenet_empty.mp4
+   :width: 640
+   :height: 360
+
+**Scenario 2: Follow (Vehicle Following)**
+
+.. code-block:: bash
+
+   # With visualization
+   python3 simulator.py --scenario follow
+   
+   # Without visualization
+   python3 simulator.py --scenario follow --no-viz --duration 30
+
+**Demo:**
+
+
+.. video:: /_static/final/frenet_follow.mp4
+   :width: 640
+   :height: 360
+
+**Scenario 3: Overtake (Lane Changes)**
+
+.. code-block:: bash
+
+   # With visualization
+   python3 simulator.py --scenario overtake
+   
+   # Without visualization
+   python3 simulator.py --scenario overtake --no-viz --duration 40
+
+**Demo:**
+
+
+.. video:: /_static/final/frenet_overtake.mp4
+   :width: 640
+   :height: 360
+
+Understanding the Visualization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The visualization displays three panels:
+
+**Main Panel (Top):**
+
+- Green rectangle: Ego vehicle with path trail showing history
+- Red rectangles: Traffic vehicles
+- Blue line: Planned trajectory
+- Blue dots: Trajectory waypoints
+- Top-left text box: Time, speed, s position, d position
+- Lower-left text box: Current behavior with color coding
+
+  - LANE KEEP: Green
+  - FOLLOW VEHICLE: Orange
+  - LANE CHANGE LEFT: Blue
+  - LANE CHANGE RIGHT: Purple
+
+**Behavior Summary Panel (Bottom Left):**
+
+Displays a log of behavior transitions during the simulation:
+
+.. code-block:: text
+
+   Time      Pos       Behavior
+   -----------------------------------
+     0.0s     0.0m  LANE CHANGE LEFT
+     3.3s    68.0m  LANE CHANGE RIGHT
+     6.6s   151.6m  LANE CHANGE LEFT
+     ...
+
+**Polynomial Coefficients Panel (Bottom Right):**
+
+Shows the current trajectory's polynomial parameters:
+
+.. code-block:: text
+
+   Duration: T = 4.00s
+
+   Longitudinal (s):
+     Start: s=0.0m, ṡ=25.0m/s
+     End:   s=100.0m, ṡ=31.0m/s
+     Coeffs: [0.00, 25.00, 0.00, 0.75...]
+
+   Lateral (d):
+     Start: d=0.00m, ḋ=0.00m/s
+     End:   d=3.50m, ḋ=0.00m/s
+     Coeffs: [0.00, 0.00, 0.00, 1.09...]
+
+   Cost: 45.2
+
+Evaluation Checklist
+~~~~~~~~~~~~~~~~~~~~~
+
+Before submission, verify:
+
+☐ ``test_frenet.py`` — 6/6 tests pass
+
+☐ ``test_polynomial.py`` — 9/9 tests pass
+
+☐ ``test_cost.py`` — 9/9 tests pass
+
+☐ ``--scenario empty`` — Completes, maintains lane
+
+☐ ``--scenario follow`` — Completes, follows lead vehicle
+
+☐ ``--scenario overtake`` — Completes all lane changes
+
+☐ No collisions in any scenario
+
+☐ Smooth trajectories (no jerky motion)
 
 ---------------------------------------------------------
-4. Configuration Parameters
+7. Evaluation: CARLA Integration (Bonus +15 pts)
 ---------------------------------------------------------
 
-The trajectory planner uses parameters that control generation, feasibility, and cost evaluation.
+For additional credit, integrate your trajectory planner with CARLA for realistic 3D visualization.
+
+Prerequisites
+~~~~~~~~~~~~~~
+
+1. CARLA 0.9.13 or later installed
+2. Python CARLA client library
+3. Completed standalone implementation (all tests passing)
+
+CARLA Setup
+~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   # Start CARLA server
+   cd /opt/carla
+   ./CarlaUE4.sh -quality-level=Low
+   
+   # In another terminal, verify connection
+   python3 -c "import carla; client = carla.Client('localhost', 2000); print(client.get_world())"
+
+Integration Architecture
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create ``carla_interface.py`` to bridge your planner with CARLA:
+
+.. code-block:: python
+
+   """carla_interface.py - CARLA Integration for Trajectory Planner"""
+   
+   import carla
+   import numpy as np
+   from frenet import create_reference_path, cartesian_to_frenet, frenet_to_cartesian
+   from polynomial import generate_candidate_trajectories
+   from cost import select_best_trajectory
+   from behavior_tree import BehaviorPlanner
+   from bt_framework import EnvironmentState
+   
+   class CarlaTrajectoryPlanner:
+       def __init__(self, host='localhost', port=2000):
+           # Connect to CARLA
+           self.client = carla.Client(host, port)
+           self.client.set_timeout(10.0)
+           self.world = self.client.get_world()
+           
+           # Get map and create reference path
+           self.map = self.world.get_map()
+           self.ref_path = self._create_reference_path()
+           
+           # Initialize planners
+           self.behavior_planner = BehaviorPlanner()
+           
+           # Spawn ego vehicle
+           self.ego = self._spawn_ego_vehicle()
+           
+       def _create_reference_path(self):
+           """Create reference path from CARLA waypoints."""
+           spawn_points = self.map.get_spawn_points()
+           start_wp = self.map.get_waypoint(spawn_points[0].location)
+           
+           waypoints = []
+           wp = start_wp
+           for _ in range(200):  # 200 waypoints
+               waypoints.append((wp.transform.location.x, wp.transform.location.y))
+               next_wps = wp.next(2.0)  # 2m spacing
+               if next_wps:
+                   wp = next_wps[0]
+               else:
+                   break
+           
+           return create_reference_path(waypoints)
+       
+       def _spawn_ego_vehicle(self):
+           """Spawn ego vehicle in CARLA."""
+           blueprint_library = self.world.get_blueprint_library()
+           vehicle_bp = blueprint_library.filter('vehicle.tesla.model3')[0]
+           spawn_point = self.map.get_spawn_points()[0]
+           return self.world.spawn_actor(vehicle_bp, spawn_point)
+       
+       def get_environment_state(self):
+           """Convert CARLA state to EnvironmentState."""
+           env = EnvironmentState()
+           
+           transform = self.ego.get_transform()
+           velocity = self.ego.get_velocity()
+           
+           env.ego_x = transform.location.x
+           env.ego_y = transform.location.y
+           env.ego_speed = np.sqrt(velocity.x**2 + velocity.y**2)
+           env.speed_limit = 31.0
+           
+           wp = self.map.get_waypoint(transform.location)
+           env.left_lane_exists = wp.get_left_lane() is not None
+           env.right_lane_exists = wp.get_right_lane() is not None
+           
+           env.vehicle_ahead = False
+           env.left_lane_clear = True
+           env.right_lane_clear = True
+           
+           return env
+       
+       def plan_and_execute(self):
+           """Main planning loop."""
+           env = self.get_environment_state()
+           command = self.behavior_planner.get_command(env)
+           
+           s, d = cartesian_to_frenet(env.ego_x, env.ego_y, self.ref_path)
+           
+           current_state = {
+               's': s, 'd': d, 
+               's_dot': env.ego_speed, 'd_dot': 0,
+               's_ddot': 0, 'd_ddot': 0
+           }
+           
+           candidates = generate_candidate_trajectories(
+               current_state,
+               target_d=command.target_d,
+               target_speed=command.target_speed,
+               T_base=command.T
+           )
+           
+           best = select_best_trajectory(
+               candidates, command.target_d, command.target_speed
+           )
+           
+           if best:
+               self._execute_trajectory(best)
+
+Running CARLA Scenarios
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   # Terminal 1: Start CARLA
+   ./CarlaUE4.sh
+   
+   # Terminal 2: Run your planner
+   python3 carla_main.py --scenario empty
+   python3 carla_main.py --scenario follow
+   python3 carla_main.py --scenario overtake
+
+CARLA Bonus Grading
+~~~~~~~~~~~~~~~~~~~~
+
+- **+5 pts:** CARLA connection works, ego follows trajectories
+- **+5 pts:** Traffic vehicles correctly simulated and avoided
+- **+5 pts:** All scenarios complete with video evidence
+
+**Submission for bonus:** Include ``carla/`` folder with:
+
+- ``carla_interface.py`` — Your CARLA integration
+- ``carla_main.py`` — Main script to run scenarios
+- ``video_empty.mp4`` — Empty scenario recording (max 60s)
+- ``video_follow.mp4`` — Follow scenario recording (max 60s)
+- ``video_overtake.mp4`` — Overtake scenario recording (max 60s)
+
+---------------------------------------------------------
+8. Configuration Parameters
+---------------------------------------------------------
 
 Vehicle Constraint Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. list-table::
-   :widths: 30 15 55
-   :header-rows: 1
-   :class: compact-table
+Defined in ``cost.py``:
 
-   * - **Parameter**
-     - **Default**
-     - **Description**
-   * - ``max_velocity``
-     - 40.0 m/s
-     - Maximum allowable vehicle speed (~90 mph).
-   * - ``max_acceleration``
-     - 4.0 m/s²
-     - Maximum comfortable acceleration.
-   * - ``max_deceleration``
-     - -8.0 m/s²
-     - Maximum comfortable deceleration.
-   * - ``max_lateral_accel``
-     - 3.0 m/s²
-     - Maximum lateral acceleration for comfort.
-   * - ``max_jerk``
-     - 10.0 m/s³
-     - Maximum rate of change of acceleration.
+.. code-block:: python
 
-Planning Parameters
-~~~~~~~~~~~~~~~~~~~~
-
-.. list-table::
-   :widths: 30 15 55
-   :header-rows: 1
-   :class: compact-table
-
-   * - **Parameter**
-     - **Default**
-     - **Description**
-   * - ``T_base``
-     - 3.0 s
-     - Base time horizon for trajectory generation.
-   * - ``T_range``
-     - 1.0 s
-     - Range around T_base to sample (±T_range).
-   * - ``dt``
-     - 0.1 s
-     - Time step for trajectory discretization.
-   * - ``d_range``
-     - 1.0 m
-     - Range around target_d to sample.
-   * - ``v_range``
-     - 5.0 m/s
-     - Range around target_speed to sample.
+   @dataclass
+   class FeasibilityLimits:
+       max_velocity: float = 40.0       # m/s (~90 mph)
+       max_acceleration: float = 4.0    # m/s²
+       max_deceleration: float = -8.0   # m/s² (negative)
+       max_lateral_accel: float = 3.0   # m/s²
+       max_jerk: float = 10.0           # m/s³
 
 Cost Function Weights
 ~~~~~~~~~~~~~~~~~~~~~~
 
-.. list-table::
-   :widths: 25 15 60
-   :header-rows: 1
-   :class: compact-table
+Defined in ``cost.py``:
 
-   * - **Weight**
-     - **Default**
-     - **Description**
-   * - ``w_jerk``
-     - 1.0
-     - Penalizes jerky motion (integral of squared jerk).
-   * - ``w_time``
-     - 1.0
-     - Penalizes longer trajectories.
-   * - ``w_d``
-     - 1.0
-     - Penalizes deviation from target lateral position.
-   * - ``w_v``
-     - 1.0
-     - Penalizes deviation from target speed.
-   * - ``w_accel``
-     - 1.0
-     - Penalizes high accelerations.
+.. code-block:: python
+
+   @dataclass
+   class CostWeights:
+       w_jerk: float = 1.0       # Penalize jerky motion
+       w_time: float = 1.0       # Penalize long trajectories
+       w_d: float = 1.0          # Penalize lateral deviation
+       w_v: float = 1.0          # Penalize speed deviation
+       w_accel: float = 1.0      # Penalize high acceleration
+
+**Tuning tips:**
+
+- Increase ``w_jerk`` for smoother trajectories
+- Increase ``w_d`` to reach target lane faster
+- Increase ``w_v`` to match target speed faster
+- Decrease ``w_time`` if trajectories are too short
 
 ---------------------------------------------------------
-5. Assignment Tasks
+9. Provided Package Structure
 ---------------------------------------------------------
 
-You will implement three modules: **Frenet Transform**, **Polynomial Trajectory**, and **Cost Function**.
-
-Task 1: Frenet Coordinate Transformation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**File:** ``frenet.py``
-
-Implement functions to convert between Cartesian (x, y) and Frenet (s, d) coordinates.
-
-
-.. prf:algorithm:: cartesian_to_frenet
-   :label: cartesian-to-frenet
-
-   **Inputs:**
-   
-   - :math:`x, y` (global position in meters)
-   - :math:`ref\_path` (ReferencePath object with waypoints)
-   
-   **Output:** Tuple (s, d) - arc length and lateral offset
-
-   1. Find closest point on reference path:
-   
-      a. :math:`min\_dist \gets \infty`
-      
-      b. :math:`closest\_idx \gets 0`
-      
-      c. **for** each point :math:`(px, py)` at index :math:`i` in path **do**
-      
-         i. :math:`dist \gets \sqrt{(x - px)^2 + (y - py)^2}`
-         
-         ii. **if** :math:`dist < min\_dist` **then** :math:`min\_dist \gets dist`, :math:`closest\_idx \gets i`
-   
-   2. Get arc length at closest point:
-   
-      a. :math:`s \gets ref\_path.s\_values[closest\_idx]`
-   
-   3. Compute lateral offset with sign:
-   
-      a. :math:`tangent \gets ref\_path.tangents[closest\_idx]`
-      
-      b. :math:`normal \gets (-tangent[1], tangent[0])` (rotate 90° left)
-      
-      c. :math:`dx \gets x - px`
-      
-      d. :math:`dy \gets y - py`
-      
-      e. :math:`d \gets dx \cdot normal[0] + dy \cdot normal[1]`
-   
-   4. **return** :math:`(s, d)`
-
-
-.. prf:algorithm:: frenet_to_cartesian
-   :label: frenet-to-cartesian
-
-   **Inputs:**
-   
-   - :math:`s` (arc length along path in meters)
-   - :math:`d` (lateral offset in meters, positive = left)
-   - :math:`ref\_path` (ReferencePath object)
-   
-   **Output:** Tuple (x, y) - Cartesian coordinates
-
-   1. Find point on path at arc length s (interpolate):
-   
-      a. :math:`idx \gets \text{searchsorted}(ref\_path.s\_values, s) - 1`
-      
-      b. :math:`idx \gets \text{clamp}(idx, 0, len(s\_values) - 2)`
-      
-      c. Interpolate position between path[idx] and path[idx+1]
-   
-   2. Get normal vector at this point:
-   
-      a. :math:`tangent \gets ref\_path.tangents[idx]`
-      
-      b. :math:`normal \gets (-tangent[1], tangent[0])`
-   
-   3. Compute Cartesian position:
-   
-      a. :math:`x \gets path\_x + d \cdot normal[0]`
-      
-      b. :math:`y \gets path\_y + d \cdot normal[1]`
-   
-   4. **return** :math:`(x, y)`
-
-
-Task 2: Polynomial Trajectory Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**File:** ``polynomial.py``
-
-Implement functions to compute polynomial coefficients and evaluate trajectories.
-
-
-.. prf:algorithm:: quintic_coefficients
-   :label: quintic-coefficients
-
-   **Inputs:**
-   
-   - :math:`start = (p_0, v_0, a_0)` (initial position, velocity, acceleration)
-   - :math:`end = (p_f, v_f, a_f)` (final position, velocity, acceleration)
-   - :math:`T` (duration in seconds)
-   
-   **Output:** Array of 6 coefficients :math:`[a_0, a_1, a_2, a_3, a_4, a_5]`
-
-   The quintic polynomial is:
-   
-   .. math::
-      p(t) = a_0 + a_1 t + a_2 t^2 + a_3 t^3 + a_4 t^4 + a_5 t^5
-
-   1. Set coefficients from initial conditions:
-   
-      a. :math:`a_0 \gets p_0`
-      
-      b. :math:`a_1 \gets v_0`
-      
-      c. :math:`a_2 \gets a_0 / 2`
-   
-   2. Set up linear system for remaining coefficients:
-   
-      a. Boundary conditions at :math:`t = T`:
-      
-         - :math:`p(T) = p_f`
-         - :math:`p'(T) = v_f`
-         - :math:`p''(T) = a_f`
-      
-      b. Form matrix equation :math:`A \mathbf{x} = \mathbf{b}`:
-      
-         .. math::
-            \begin{bmatrix} T^3 & T^4 & T^5 \\ 3T^2 & 4T^3 & 5T^4 \\ 6T & 12T^2 & 20T^3 \end{bmatrix} \begin{bmatrix} a_3 \\ a_4 \\ a_5 \end{bmatrix} = \begin{bmatrix} p_f - a_0 - a_1 T - a_2 T^2 \\ v_f - a_1 - 2 a_2 T \\ a_f - 2 a_2 \end{bmatrix}
-   
-   3. Solve: :math:`[a_3, a_4, a_5] \gets \text{np.linalg.solve}(A, b)`
-   
-   4. **return** :math:`[a_0, a_1, a_2, a_3, a_4, a_5]`
-
-
-.. prf:algorithm:: quartic_coefficients
-   :label: quartic-coefficients
-
-   **Inputs:**
-   
-   - :math:`start = (p_0, v_0, a_0)` (initial position, velocity, acceleration)
-   - :math:`end\_vel = (v_f, a_f)` (final velocity, acceleration — position unconstrained)
-   - :math:`T` (duration in seconds)
-   
-   **Output:** Array of 5 coefficients :math:`[a_0, a_1, a_2, a_3, a_4]`
-
-   The quartic polynomial is:
-   
-   .. math::
-      p(t) = a_0 + a_1 t + a_2 t^2 + a_3 t^3 + a_4 t^4
-
-   1. Set coefficients from initial conditions:
-   
-      a. :math:`a_0 \gets p_0`
-      
-      b. :math:`a_1 \gets v_0`
-      
-      c. :math:`a_2 \gets a_0 / 2`
-   
-   2. Set up linear system for remaining coefficients:
-   
-      a. Boundary conditions at :math:`t = T`:
-      
-         - :math:`p'(T) = v_f`
-         - :math:`p''(T) = a_f`
-      
-      b. Form matrix equation :math:`A \mathbf{x} = \mathbf{b}`:
-      
-         .. math::
-            \begin{bmatrix} 3T^2 & 4T^3 \\ 6T & 12T^2 \end{bmatrix} \begin{bmatrix} a_3 \\ a_4 \end{bmatrix} = \begin{bmatrix} v_f - a_1 - 2 a_2 T \\ a_f - 2 a_2 \end{bmatrix}
-   
-   3. Solve: :math:`[a_3, a_4] \gets \text{np.linalg.solve}(A, b)`
-   
-   4. **return** :math:`[a_0, a_1, a_2, a_3, a_4]`
-
-
-.. prf:algorithm:: generate_trajectory
-   :label: generate-trajectory
-
-   **Inputs:**
-   
-   - :math:`d\_coeffs` (lateral polynomial coefficients)
-   - :math:`s\_coeffs` (longitudinal polynomial coefficients)
-   - :math:`T` (duration)
-   - :math:`dt` (time step)
-   
-   **Output:** Trajectory object with list of TrajectoryState
-
-   1. :math:`states \gets []`
-   
-   2. **for** :math:`t = 0` **to** :math:`T` **step** :math:`dt` **do**
-   
-      a. Evaluate lateral polynomial:
-      
-         - :math:`d \gets \text{eval}(d\_coeffs, t)`
-         - :math:`d\_dot \gets \text{eval\_deriv}(d\_coeffs, t, 1)`
-         - :math:`d\_ddot \gets \text{eval\_deriv}(d\_coeffs, t, 2)`
-      
-      b. Evaluate longitudinal polynomial:
-      
-         - :math:`s \gets \text{eval}(s\_coeffs, t)`
-         - :math:`s\_dot \gets \text{eval\_deriv}(s\_coeffs, t, 1)`
-         - :math:`s\_ddot \gets \text{eval\_deriv}(s\_coeffs, t, 2)`
-      
-      c. :math:`states.\text{append}(\text{TrajectoryState}(t, s, d, s\_dot, d\_dot, s\_ddot, d\_ddot))`
-   
-   3. **return** Trajectory(states, T, d_coeffs, s_coeffs)
-
-
-Task 3: Cost Function and Feasibility
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**File:** ``cost.py``
-
-Implement functions to evaluate trajectory cost and check feasibility.
-
-
-.. prf:algorithm:: compute_total_cost
-   :label: compute-total-cost
-
-   **Inputs:**
-   
-   - :math:`traj` (Trajectory object)
-   - :math:`target\_d` (target lateral position)
-   - :math:`target\_speed` (target velocity)
-   - :math:`weights` (CostWeights object)
-   
-   **Output:** Total cost (lower is better)
-
-   1. Compute jerk cost (integrated squared jerk):
-   
-      a. :math:`J_{jerk} \gets 0`
-      
-      b. **for** each state in trajectory **do**
-      
-         i. Compute :math:`j_s` (third derivative of s polynomial)
-         
-         ii. Compute :math:`j_d` (third derivative of d polynomial)
-         
-         iii. :math:`J_{jerk} \gets J_{jerk} + (j_s^2 + j_d^2) \cdot dt`
-   
-   2. Compute time cost:
-   
-      a. :math:`J_{time} \gets traj.T`
-   
-   3. Compute lateral deviation cost:
-   
-      a. :math:`d_f \gets traj.states[-1].d`
-      
-      b. :math:`J_{lat} \gets (d_f - target\_d)^2`
-   
-   4. Compute speed deviation cost:
-   
-      a. :math:`v_f \gets traj.states[-1].s\_dot`
-      
-      b. :math:`J_{vel} \gets (v_f - target\_speed)^2`
-   
-   5. Compute total weighted cost:
-   
-      a. :math:`cost \gets w_{jerk} \cdot J_{jerk} + w_{time} \cdot J_{time} + w_d \cdot J_{lat} + w_v \cdot J_{vel}`
-   
-   6. **return** :math:`cost`
-
-
-.. prf:algorithm:: check_feasibility
-   :label: check-feasibility
-
-   **Inputs:**
-   
-   - :math:`traj` (Trajectory object)
-   - :math:`limits` (FeasibilityLimits object)
-   
-   **Output:** True if all constraints satisfied, False otherwise
-
-   1. **for** each :math:`state` **in** :math:`traj.states` **do**
-   
-      a. Check velocity bounds:
-      
-         - **if** :math:`state.s\_dot < 0` **or** :math:`state.s\_dot > v_{max}` **then return** False
-      
-      b. Check acceleration bounds:
-      
-         - :math:`a_{total} \gets \sqrt{state.s\_ddot^2 + state.d\_ddot^2}`
-         - **if** :math:`state.s\_ddot < a_{min}` **or** :math:`state.s\_ddot > a_{max}` **then return** False
-      
-      c. Check lateral acceleration:
-      
-         - :math:`a_{lat} \gets |state.d\_ddot|`
-         - **if** :math:`a_{lat} > a_{lat,max}` **then return** False
-   
-   2. Check jerk bounds (compute from polynomial):
-   
-      a. **for** each time step **do**
-      
-         - Compute jerk from third derivative
-         - **if** :math:`|jerk| > j_{max}` **then return** False
-   
-   3. **return** True
-
-
-.. prf:algorithm:: select_best_trajectory
-   :label: select-best-trajectory
-
-   **Inputs:**
-   
-   - :math:`candidates` (list of Trajectory objects)
-   - :math:`target\_d, target\_speed` (targets from behavior planner)
-   - :math:`weights, limits` (cost weights and feasibility limits)
-   
-   **Output:** Best feasible trajectory, or None
-
-   1. :math:`best \gets \text{None}`
-   
-   2. :math:`best\_cost \gets \infty`
-   
-   3. **for** each :math:`traj` **in** :math:`candidates` **do**
-   
-      a. **if not** check_feasibility(traj, limits) **then continue**
-      
-      b. :math:`traj.feasible \gets \text{True}`
-      
-      c. :math:`cost \gets \text{compute\_total\_cost}(traj, target\_d, target\_speed, weights)`
-      
-      d. :math:`traj.cost \gets cost`
-      
-      e. **if** :math:`cost < best\_cost` **then**
-      
-         - :math:`best \gets traj`
-         - :math:`best\_cost \gets cost`
-   
-   4. **return** :math:`best`
-
-
----------------------------------------------------------
-6. Test Scenarios
----------------------------------------------------------
-
-Your implementation will be tested on three scenarios of increasing complexity.
-
-Scenario 1: Cruising (Empty Road)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Description:** Maintain lane at constant speed on empty highway.
-
-**What It Tests:**
-
-- Frenet coordinate transformation
-- Polynomial trajectory generation
-- Basic feasibility checking
-
-**Expected Behavior:**
-
-- Vehicle maintains d ≈ 0 (lane center)
-- Vehicle reaches target speed (31 m/s)
-- Smooth acceleration profile
-
-Scenario 2: Following
-~~~~~~~~~~~~~~~~~~~~~~
-
-**Description:** Follow a lead vehicle traveling at constant speed.
-
-**What It Tests:**
-
-- Speed adaptation in trajectory
-- Collision checking with lead vehicle
-- Smooth following behavior
-
-**Expected Behavior:**
-
-- Vehicle matches lead vehicle speed
-- Maintains safe following distance
-- No collision with lead vehicle
-
-Scenario 3: Overtaking
-~~~~~~~~~~~~~~~~~~~~~~~
-
-**Description:** Overtake a slow vehicle by changing to left lane.
-
-**What It Tests:**
-
-- Lane change trajectory generation
-- Collision checking during lane change
-- Return to original lane
-
-**Expected Behavior:**
-
-- Smooth lateral transition (d: 0 → 3.5 → 0)
-- No collision during overtake
-- Returns to center lane after passing
-
----------------------------------------------------------
-7. Getting Started
----------------------------------------------------------
-
-Getting Started Checklist
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1. ☐ Completed Assignment 3 (Behavioral Planner)
-2. ☐ Starter code downloaded and environment configured
-3. ☐ Can run ``python simulator.py --no-viz``
-4. ☐ Understand Frenet coordinates from L6 lecture
-5. ☐ Understand polynomial trajectory generation
-
-Step 1: Set Up Environment
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Use same environment from RWA3
-   source venv/bin/activate
-   
-   # Copy your behavior_tree.py from RWA3
-   cp ../rwa3/behavior_tree.py .
-
-Step 2: Implement Frenet Transform
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1. Open ``frenet.py``
-2. Implement ``cartesian_to_frenet()``
-3. Implement ``frenet_to_cartesian()``
-4. Test roundtrip accuracy: ``python test_frenet.py``
-
-Step 3: Implement Polynomial Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1. Open ``polynomial.py``
-2. Implement ``quintic_coefficients()``
-3. Implement ``quartic_coefficients()``
-4. Implement ``generate_trajectory()``
-5. Test: ``python test_polynomial.py``
-
-Step 4: Implement Cost Function
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-1. Open ``cost.py``
-2. Implement ``compute_total_cost()``
-3. Implement ``check_feasibility()``
-4. Implement ``select_best_trajectory()``
-5. Test: ``python test_cost.py``
-
-Step 5: Integration Testing
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Run with visualization
-   python simulator.py --scenario empty
-   python simulator.py --scenario follow
-   python simulator.py --scenario overtake
-   
-   # Run text-only mode
-   python simulator.py --no-viz --scenario overtake --duration 40
-
----------------------------------------------------------
-8. Provided Package Structure
----------------------------------------------------------
+The starter package includes all necessary files. RWA3 behavior tree files are already included.
 
 .. code-block:: text
 
    final_project_starter/
-   ├── frenet.py                 # <-- TODO: Implement Frenet transforms
-   ├── polynomial.py             # <-- TODO: Implement polynomial generation
-   ├── cost.py                   # <-- TODO: Implement cost and feasibility
-   ├── behavior_tree.py          # Copy from RWA3
-   ├── simulator.py              # Standalone simulator (Provided)
-   ├── visualizer.py             # Matplotlib visualization (Provided)
-   ├── test_frenet.py            # Unit tests (Provided)
-   ├── test_polynomial.py        # Unit tests (Provided)
-   ├── test_cost.py              # Unit tests (Provided)
-   ├── requirements.txt          # Python dependencies
-   └── README.md                 # Instructions
+   ├── frenet.py               # TODO: Implement Frenet transforms
+   ├── polynomial.py           # TODO: Implement polynomial trajectories
+   ├── cost.py                 # TODO: Implement cost functions
+   ├── bt_framework.py         # Provided (behavior tree base classes)
+   ├── bt_nodes.py             # Provided (behavior tree nodes)
+   ├── behavior_tree.py        # Provided (behavioral planner)
+   ├── simulator.py            # Provided (integrated simulator)
+   ├── visualizer.py           # Provided (visualization)
+   ├── test_frenet.py          # Unit tests for frenet.py
+   ├── test_polynomial.py      # Unit tests for polynomial.py
+   ├── test_cost.py            # Unit tests for cost.py
+   ├── README.md               # Quick start guide
+   └── requirements.txt        # numpy, matplotlib
 
-**Files you implement:**
+Visualization Layout
+~~~~~~~~~~~~~~~~~~~~~
 
-- ✏️ ``frenet.py`` — Frenet coordinate transforms
-- ✏️ ``polynomial.py`` — Polynomial trajectory generation
-- ✏️ ``cost.py`` — Cost function and feasibility checking
+The simulator provides a three-panel visualization:
 
-**Files you copy from RWA3:**
+**Main Panel (Top):** Shows the curved road with ego vehicle (green), traffic vehicles (red), planned trajectory (blue line), and current behavior with color-coded text.
 
-- 📋 ``behavior_tree.py`` — Your behavioral planner
+**Behavior Summary (Bottom Left):** Logs each behavior transition with timestamp and position, showing the last 8 transitions.
 
-**Files you should NOT modify:**
+**Polynomial Coefficients (Bottom Right):** Displays the current trajectory's start/end states and polynomial coefficients for both longitudinal (s) and lateral (d) motion.
 
-- ❌ ``simulator.py`` — Provided simulator
-- ❌ ``visualizer.py`` — Provided visualization
-- ❌ ``test_*.py`` — Provided unit tests
+.. code-block:: text
 
----------------------------------------------------------
-9. Testing and Evaluation
----------------------------------------------------------
+   ┌─────────────────────────────────────────────────────────────────┐
+   │                       ROAD VIEW (Top Panel)                     │
+   │  - Green vehicle: Ego with path trail                          │
+   │  - Red vehicles: Traffic                                        │
+   │  - Blue line/dots: Planned trajectory                          │
+   │  - Behavior text with color coding (green/orange/blue/purple)  │
+   ├────────────────────────────┬────────────────────────────────────┤
+   │   BEHAVIOR SUMMARY         │   POLYNOMIAL COEFFICIENTS          │
+   │   (Bottom Left)            │   (Bottom Right)                   │
+   │                            │                                    │
+   │   Time      Pos  Behavior  │   Duration: T = 4.00s              │
+   │   0.0s    0.0m  LANE KEEP  │                                    │
+   │   3.3s   68.0m  LANE CHG L │   Longitudinal (s):                │
+   │   6.6s  151.6m  LANE CHG R │     Start: s=0m, ṡ=25m/s           │
+   │   ...                      │     End: s=100m, ṡ=31m/s           │
+   │                            │     Coeffs: [0.00, 25.00, ...]     │
+   │                            │                                    │
+   │                            │   Lateral (d):                     │
+   │                            │     Start: d=0m, ḋ=0m/s            │
+   │                            │     End: d=3.5m, ḋ=0m/s            │
+   │                            │     Coeffs: [0.00, 0.00, ...]      │
+   │                            │                                    │
+   │                            │   Cost: 45.2                       │
+   └────────────────────────────┴────────────────────────────────────┘
 
-Run Unit Tests
-~~~~~~~~~~~~~~~
+**Behavior Colors:**
 
-.. code-block:: bash
-
-   # Test each module
-   python test_frenet.py
-   python test_polynomial.py
-   python test_cost.py
-   
-   # Run all tests
-   python -m pytest test_*.py -v
-
-Evaluation Criteria
-~~~~~~~~~~~~~~~~~~~~
-
-.. list-table::
-   :widths: 30 70
-   :header-rows: 1
-   :class: compact-table
-
-   * - **Metric**
-     - **Requirement**
-   * - **Frenet Transform**
-     - Roundtrip error < 0.5 m
-   * - **Polynomial Generation**
-     - All boundary conditions satisfied
-   * - **Feasibility Checking**
-     - All constraints correctly verified
-   * - **Cost Function**
-     - Correct cost computation and trajectory selection
-   * - **Scenario Completion**
-     - All scenarios pass without collision
+- LANE KEEP: Green
+- FOLLOW VEHICLE: Orange
+- LANE CHANGE LEFT: Blue
+- LANE CHANGE RIGHT: Purple
 
 ---------------------------------------------------------
 10. Submission Requirements
@@ -816,13 +1033,31 @@ Submit a **single ZIP file** named ``groupX_final_project.zip`` containing:
    ├── frenet.py                     # Your implementation
    ├── polynomial.py                 # Your implementation
    ├── cost.py                       # Your implementation
-   ├── behavior_tree.py              # From RWA3
+   ├── bt_framework.py               # Provided (include as-is)
+   ├── bt_nodes.py                   # Provided (include as-is)
+   ├── behavior_tree.py              # Provided (include as-is)
+   ├── simulator.py                  # Provided (include as-is)
+   ├── visualizer.py                 # Provided (include as-is)
    ├── results/
-   │   ├── scenario_empty.png        # Screenshot
-   │   ├── scenario_follow.png       # Screenshot
-   │   ├── scenario_overtake.png     # Screenshot
+   │   ├── scenario_empty.png        # Screenshot of visualization
+   │   ├── scenario_follow.png       # Screenshot of visualization
+   │   ├── scenario_overtake.png     # Screenshot of visualization
    │   └── test_output.txt           # Unit test results
-   └── report.pdf                    # Required report (3-5 pages)
+   ├── carla/                        # BONUS ONLY
+   │   ├── carla_interface.py
+   │   ├── video_empty.mp4
+   │   ├── video_follow.mp4
+   │   └── video_overtake.mp4
+   └── report.pdf                    # Required (3-5 pages)
+
+Generating test_output.txt
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   python3 test_frenet.py > results/test_output.txt 2>&1
+   python3 test_polynomial.py >> results/test_output.txt 2>&1
+   python3 test_cost.py >> results/test_output.txt 2>&1
 
 Report Requirements
 ~~~~~~~~~~~~~~~~~~~~
@@ -831,46 +1066,15 @@ Report Requirements
 
 **Required Sections:**
 
-1. **Frenet Transform:**
-   
-   - Explain your implementation approach
-   - Discuss roundtrip accuracy
-   - Any challenges encountered
+1. **Frenet Transform:** Implementation approach, roundtrip accuracy, challenges
 
-2. **Polynomial Trajectories:**
-   
-   - Mathematical derivation of coefficient computation
-   - Boundary condition verification
+2. **Polynomial Trajectories:** Mathematical derivation, boundary condition verification
 
-3. **Cost Function:**
-   
-   - Cost components and their purpose
-   - Weight tuning process
+3. **Cost Function:** Cost components, weight tuning process
 
-4. **Results:**
-   
-   - Trajectory plots from each scenario
-   - Discussion of trajectory quality
+4. **Results:** Trajectory plots from each scenario, discussion of quality
 
-5. **Discussion:**
-   
-   - What worked well?
-   - What was challenging?
-   - How would you improve your implementation?
-
-Submission Checklist
-~~~~~~~~~~~~~~~~~~~~
-
-Before submitting, ensure:
-
-- ☐ Frenet transform implemented and tested
-- ☐ Polynomial trajectory generation implemented and tested
-- ☐ Cost function and feasibility checking implemented
-- ☐ All three scenarios complete without collision
-- ☐ Report complete with all sections (3-5 pages)
-- ☐ Screenshots from each scenario included
-- ☐ Code is well-commented
-- ☐ ZIP file follows naming convention
+5. **Discussion:** What worked, what was challenging, potential improvements
 
 ---------------------------------------------------------
 11. Grading Rubric
@@ -880,157 +1084,97 @@ Before submitting, ensure:
 
 **Frenet Transform (15 pts):**
 
-- **cartesian_to_frenet (7 pts):**
-  
-  - 7 pts: Correct s, d computation
-  - 5 pts: s correct, d has sign issues
-  - 3 pts: Partially functional
-  - 0 pts: Not functional
-
-- **frenet_to_cartesian (5 pts):**
-  
-  - 5 pts: Correct x, y recovery
-  - 3 pts: Position approximately correct
-  - 0 pts: Not functional
-
-- **Roundtrip accuracy (3 pts):**
-  
-  - 3 pts: Error < 0.5 m
-  - 2 pts: Error < 1.0 m
-  - 0 pts: Error > 1.0 m
+- ``cartesian_to_frenet`` (7 pts): Correct s, d computation
+- ``frenet_to_cartesian`` (5 pts): Correct x, y recovery
+- Roundtrip accuracy (3 pts): Error < 0.5 m
 
 **Polynomial Trajectories (15 pts):**
 
-- **quintic_coefficients (6 pts):**
-  
-  - 6 pts: All 6 boundary conditions satisfied
-  - 4 pts: Most conditions satisfied
-  - 0 pts: Not functional
-
-- **quartic_coefficients (4 pts):**
-  
-  - 4 pts: All 5 boundary conditions satisfied
-  - 2 pts: Most conditions satisfied
-  - 0 pts: Not functional
-
-- **generate_trajectory (5 pts):**
-  
-  - 5 pts: Correct state evaluation at all time steps
-  - 3 pts: Partial correctness
-  - 0 pts: Not functional
+- ``quintic_coefficients`` (6 pts): All 6 boundary conditions satisfied
+- ``quartic_coefficients`` (4 pts): All 5 boundary conditions satisfied
+- ``generate_trajectory`` (5 pts): Correct state evaluation
 
 **Cost Function (15 pts):**
 
-- **compute_total_cost (6 pts):**
-  
-  - 6 pts: All cost components correctly computed
-  - 4 pts: Most components correct
-  - 0 pts: Not functional
-
-- **check_feasibility (5 pts):**
-  
-  - 5 pts: All constraints correctly checked
-  - 3 pts: Most constraints checked
-  - 0 pts: Not functional
-
-- **select_best_trajectory (4 pts):**
-  
-  - 4 pts: Correctly selects lowest-cost feasible trajectory
-  - 2 pts: Selection works with issues
-  - 0 pts: Not functional
+- ``compute_total_cost`` (6 pts): All components correct
+- ``check_feasibility`` (5 pts): All constraints checked
+- ``select_best_trajectory`` (4 pts): Correct selection
 
 **Integration & Results (15 pts):**
 
-- **Scenarios pass (9 pts):**
-  
-  - 9 pts: All 3 scenarios complete without collision
-  - 6 pts: 2 scenarios pass
-  - 3 pts: 1 scenario passes
-  - 0 pts: No scenarios pass
+- Scenarios pass (9 pts): 3 pts each for empty, follow, overtake
+- Trajectory quality (3 pts): Smooth, comfortable motion
+- Report (3 pts): Complete, well-written
 
-- **Trajectory quality (3 pts):**
-  
-  - 3 pts: Smooth, comfortable trajectories
-  - 2 pts: Some jerkiness
-  - 0 pts: Poor quality
+**CARLA Bonus (+15 pts):**
 
-- **Report (3 pts):**
-  
-  - 3 pts: Complete, well-written report
-  - 2 pts: Partial report
-  - 0 pts: Missing report
+- Connection works (+5 pts)
+- Traffic avoidance (+5 pts)
+- Video evidence (+5 pts)
 
 ---------------------------------------------------------
-12. Bonus: CARLA Integration (+15 pts)
+12. Quick Reference: Running Everything
 ---------------------------------------------------------
 
-For additional credit, integrate your trajectory planner with the CARLA simulator.
+.. code-block:: bash
 
-Requirements
-~~~~~~~~~~~~~
+   # 1. Setup
+   cd final_project_starter/
+   pip install numpy matplotlib
+   
+   # 2. Run unit tests (implement functions first!)
+   python3 test_frenet.py
+   python3 test_polynomial.py
+   python3 test_cost.py
+   
+   # 3. Run simulations with visualization
+   python3 simulator.py --scenario empty
+   python3 simulator.py --scenario follow
+   python3 simulator.py --scenario overtake
+   
+   # 4. Run simulations without visualization (text output)
+   python3 simulator.py --scenario overtake --no-viz --duration 30
+   
+   # 5. Generate test output for submission
+   mkdir -p results
+   python3 test_frenet.py > results/test_output.txt 2>&1
+   python3 test_polynomial.py >> results/test_output.txt 2>&1
+   python3 test_cost.py >> results/test_output.txt 2>&1
+   
+   # 6. CARLA bonus (optional)
+   ./CarlaUE4.sh  # In separate terminal
+   python3 carla_main.py --scenario overtake
 
-1. Install CARLA 0.9.13 or later
-2. Implement ``carla_interface.py`` to connect to CARLA
-3. Convert CARLA waypoints to reference path
-4. Visualize trajectories in CARLA
-5. Run all three scenarios in CARLA
+Behavior Summary Output
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-Bonus Grading
-~~~~~~~~~~~~~~
+When running with ``--no-viz``, a behavior summary is displayed at the end:
 
-- **+5 pts:** CARLA connection works, ego vehicle follows trajectories
-- **+5 pts:** Traffic vehicles correctly simulated and avoided
-- **+5 pts:** All scenarios complete successfully with video evidence
+.. code-block:: text
 
-**Submission:** Include a ``carla/`` folder with your CARLA integration code and video recordings of each scenario (MP4, max 60 seconds each).
-
----------------------------------------------------------
-13. Learning Outcomes
----------------------------------------------------------
-
-By completing this project, you will:
-
-- ✅ **Master Frenet coordinate transformation**
-  
-  - Convert between global and road-relative frames
-  - Understand the benefits of road-aligned coordinates
-
-- ✅ **Implement polynomial trajectory generation**
-  
-  - Solve boundary value problems for trajectory planning
-  - Understand quintic vs. quartic polynomials
-  - Evaluate trajectories and their derivatives
-
-- ✅ **Design trajectory optimization**
-  
-  - Sample-based trajectory generation
-  - Multi-objective cost function design
-  - Feasibility constraint checking
-
-- ✅ **Complete an end-to-end AV planning stack**
-  
-  - Integrate behavioral and trajectory planning
-  - Test in realistic simulation
-
-**Connection to Course Material:**
-
-This project implements concepts from L6 (Trajectory Planning):
-
-- Frenet optimal trajectory method (Werling et al.)
-- Polynomial trajectory representation
-- Sample-based motion planning
-
-Combined with RWA3, you've built a **complete autonomous driving planning system**!
+   ============================================================
+   BEHAVIOR SUMMARY
+   ============================================================
+       Time    Position  Behavior            
+   --------  ----------  --------------------
+       0.0s        0.0m  LANE CHANGE LEFT    
+       3.3s       68.0m  LANE CHANGE RIGHT   
+       6.6s      151.6m  LANE CHANGE LEFT    
+       9.8s      232.3m  LANE CHANGE RIGHT   
+      11.4s      275.8m  FOLLOW VEHICLE      
+      13.8s      335.4m  LANE CHANGE RIGHT   
+      14.8s      357.0m  LANE KEEP           
+   ============================================================
 
 ---------------------------------------------------------
-14. References
+13. References
 ---------------------------------------------------------
 
 **Primary References:**
 
-- Werling, M., Ziegler, J., Kammel, S., & Thrun, S. (2010). *Optimal Trajectory Generation for Dynamic Street Scenarios in a Frenet Frame.* IEEE International Conference on Robotics and Automation (ICRA).
-- González, D., Pérez, J., Milanés, V., & Nashashibi, F. (2016). *A Review of Motion Planning Techniques for Automated Vehicles.* IEEE Transactions on Intelligent Transportation Systems.
+- Werling, M., Ziegler, J., Kammel, S., & Thrun, S. (2010). *Optimal Trajectory Generation for Dynamic Street Scenarios in a Frenet Frame.* IEEE ICRA.
+- González, D., Pérez, J., Milanés, V., & Nashashibi, F. (2016). *A Review of Motion Planning Techniques for Automated Vehicles.* IEEE T-ITS.
 
 **Additional Reading:**
 
-- Paden, B., Čáp, M., Yong, S. Z., Yershov, D., & Frazzoli, E. (2016). *A Survey of Motion Planning and Control Techniques Adopted in Self-Driving Vehicles.* IEEE Transactions on Intelligent Vehicles.
+- Paden, B., et al. (2016). *A Survey of Motion Planning and Control Techniques Adopted in Self-Driving Vehicles.* IEEE T-IV.
