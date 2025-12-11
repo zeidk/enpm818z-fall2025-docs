@@ -8,7 +8,7 @@ Assignment 3
 :Topic: L5 — Behavioral Planning
 :Assigned: December 1, 2025
 :Due: December 13, 2025
-:Total Points: 40 pts (+10 bonus)
+:Total Points: 40 pts (+20 bonus)
 :Language: Python
 
 .. admonition:: Resources
@@ -19,6 +19,13 @@ Assignment 3
    - 📖 Lecture Materials: L5 (Behavioral Planning - Behavior Trees)
 
 .. admonition:: Changelog
+
+   **Version 2.1.0** (2025-12-10)
+
+   - Added comprehensive :ref:`CARLA integration guide <carla-integration>` for bonus points (+20 pts)
+   - Added Town04 additional maps installation instructions for Docker and native
+   - CARLA scripts now included in starter package
+   - Students implement only ``get_environment_state()`` method
 
    **Version 2.0.0** (2025-12-05)
 
@@ -41,7 +48,7 @@ Assignment 3
    **Simulator Options:**
    
    - **Primary:** Standalone Python simulator (no external dependencies)
-   - **Bonus (+10 pts):** CARLA integration for realistic 3D visualization
+   - **Bonus (+20 pts):** CARLA integration for realistic 3D visualization
 
 ---------------------------------------------------------
 1. Objective
@@ -633,26 +640,414 @@ Submit a **single ZIP file** named ``groupX_rwa3.zip`` containing:
 
 - Complete README, well-commented code, test output saved
 
+.. _carla-integration:
+
 ---------------------------------------------------------
-10. Bonus: CARLA Integration (+10 pts)
+10. Bonus: CARLA Integration (+20 pts)
 ---------------------------------------------------------
 
-For additional credit, integrate your behavioral planner with the CARLA simulator.
+For additional credit, run your behavioral planner in the CARLA 3D driving simulator.
 
-**Requirements:**
+.. note::
 
-1. Install CARLA 0.9.13 or later
-2. Implement ``carla_interface.py`` to connect to CARLA
-3. Map CARLA perception data to ``EnvironmentState``
-4. Run all three scenarios in CARLA
+   CARLA integration is **optional**. You can earn full marks (40 pts) without it.
 
-**Bonus Grading:**
+Overview
+~~~~~~~~
 
-- **+5 pts:** CARLA connection works, vehicle spawns and moves
-- **+3 pts:** Perception correctly mapped to EnvironmentState
-- **+2 pts:** All scenarios complete successfully in CARLA
+The CARLA integration uses the **same behavior tree** you implemented for the standalone simulator. The only difference is how perception data is obtained—instead of a simple 2D simulation, you extract it from CARLA's 3D world.
 
-**Submission:** Include a ``carla/`` folder with your CARLA integration code and a video recording of each scenario (MP4, max 30 seconds each).
+.. warning::
+
+   **Do not move or rename the** ``carla/`` **folder!**
+   
+   The starter package includes a ``carla/`` folder inside ``rwa3_starter/``. Keep this folder structure intact:
+   
+   .. code-block:: text
+   
+      rwa3_starter/
+      ├── bt_framework.py
+      ├── bt_nodes.py
+      ├── behavior_tree.py
+      ├── simulator.py
+      ├── visualizer.py
+      ├── test_behavior_tree.py
+      └── carla/                    # DO NOT MOVE THIS FOLDER
+          ├── carla_interface.py    # You implement get_environment_state()
+          ├── carla_controller.py
+          ├── carla_simulator.py
+          ├── reset_carla.py
+          ├── verify_setup.py
+          └── README.md
+   
+   The scripts import from the parent directory (``..``) and will break if moved.
+
+CARLA Scripts Overview
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :widths: 25 55 20
+   :header-rows: 1
+   :class: compact-table
+
+   * - **File**
+     - **Description**
+     - **You Modify?**
+   * - ``carla_interface.py``
+     - Bridge between your behavior tree and CARLA. Handles connection, vehicle spawning, perception extraction, and control. **You implement** ``get_environment_state()``.
+     - **YES**
+   * - ``carla_controller.py``
+     - Low-level vehicle controller using CARLA's autopilot and traffic manager. Handles lane keeping, lane changes, and speed control.
+     - No
+   * - ``carla_simulator.py``
+     - Main entry point. Runs the simulation loop: gets perception → calls your planner → applies commands. Includes pygame visualization and HUD.
+     - No
+   * - ``reset_carla.py``
+     - Utility to reset CARLA to a clean state. Run this if CARLA freezes or behaves unexpectedly (disables synchronous mode, destroys vehicles).
+     - No
+   * - ``verify_setup.py``
+     - Verification script to check your CARLA installation. Tests connection, Town04 availability, vehicle spawning, and synchronous mode.
+     - No
+
+Prerequisites
+~~~~~~~~~~~~~
+
+Before starting, ensure you have:
+
+1. **CARLA Server** running (Docker or native installation)
+2. **Town04 Map** installed (highway map required for lane-change scenarios)
+3. **Python CARLA package** installed (``pip install carla``)
+
+
+Installing Additional Maps (Town04)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Town04 is a **highway map** required for lane-change scenarios. It is not included in the base CARLA installation.
+
+.. warning::
+
+   Without Town04, the overtake scenario will not work correctly. Run ``verify_setup.py`` to check if Town04 is available.
+
+.. note::
+
+   In the instructions below, replace ``0.9.16`` with your CARLA version if different. The additional maps archive (e.g., `AdditionalMaps_0.9.16.tar.gz`) must match your CARLA version (e.g., 0.9.16).
+
+**For Docker Installation:**
+
+.. code-block:: bash
+
+   # Step 1: Download additional maps on your HOST machine
+   cd ~/Downloads
+   wget https://carla-releases.s3.us-east-005.backblazeb2.com/Linux/AdditionalMaps_0.9.16.tar.gz
+
+   # Step 2: Copy the archive into the running container
+   docker cp AdditionalMaps_0.9.16.tar.gz carla-server:/home/carla/
+
+   # Step 3: Enter the container as root and install
+   docker exec -it --user root carla-server bash
+   
+   # Inside container:
+   cd /home/carla
+   tar -xzf AdditionalMaps_0.9.16.tar.gz
+   ./ImportAssets.sh
+   exit
+
+   # Step 4: Restart container to apply changes
+   docker restart carla-server
+
+**For Native Installation:**
+
+.. code-block:: bash
+
+   # Step 1: Navigate to your CARLA installation directory
+   cd /path/to/CARLA_0.9.16
+   
+   # Step 2: Download additional maps
+   wget https://carla-releases.s3.us-east-005.backblazeb2.com/Linux/AdditionalMaps_0.9.16.tar.gz
+   
+   # Step 3: Extract and import
+   tar -xzf AdditionalMaps_0.9.16.tar.gz
+   ./ImportAssets.sh
+   
+   # Step 4: Restart CARLA
+   # Kill any running instance and start again
+   ./CarlaUE4.sh <options>
+
+
+
+Step 1: Verify Your Setup
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Before implementing anything, verify your CARLA installation works correctly.
+
+**Start CARLA server:**
+
+.. code-block:: bash
+
+   # Docker
+   docker start -ai carla-server
+   
+   # Native
+   ./CarlaUE4.sh <options>
+
+**Run verification script:**
+
+.. code-block:: bash
+
+   cd rwa3_starter/carla
+   python verify_setup.py
+
+**Expected output (all checks should pass):**
+
+.. code-block:: text
+
+   ============================================================
+   CARLA Setup Verification
+   ============================================================
+   
+   [1/5] Testing connection...
+     ✓ Connected to CARLA 0.9.16
+   
+   [2/5] Checking available maps...
+     Found 12 maps: Town01, Town02, Town03, Town04, Town05...
+     ✓ Town04 (highway map) is available
+   
+   [3/5] Loading Town04...
+     ✓ Town04 loaded successfully
+   
+   [4/5] Testing vehicle spawn...
+     ✓ Vehicle spawned at (5, -170)
+     ✓ Adjacent lanes available: left, right
+   
+   [5/5] Testing synchronous mode...
+     ✓ Synchronous mode works correctly
+   
+   ============================================================
+   ✓ ALL CHECKS PASSED!
+   ============================================================
+   
+   Your CARLA setup is ready. You can now run:
+     python carla_simulator.py --scenario empty
+
+**If Town04 is missing:**
+
+.. code-block:: text
+
+   [2/5] Checking available maps...
+     Found 5 maps: Town01, Town02, Town03, Town05, Town10HD...
+     ✗ WARNING: Town04 not found!
+       Please install additional maps (see setup instructions)
+
+Install the additional maps following the instructions in the `Installing Additional Maps (Town04)`_ section above.
+
+Step 2: Implement ``get_environment_state()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Open ``carla/carla_interface.py`` and find the ``get_environment_state()`` method (around line 679). This is the **only method you need to implement**.
+
+**Method signature:**
+
+.. code-block:: python
+
+   def get_environment_state(self) -> EnvironmentState:
+       """
+       Extract perception data from CARLA and return EnvironmentState.
+       
+       Returns:
+           EnvironmentState with all perception fields populated
+       """
+
+**Fields to populate:**
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 1
+   :class: compact-table
+
+   * - **Field**
+     - **How to Compute**
+   * - ``ego_speed``
+     - Get velocity from ``self.ego_vehicle.get_velocity()``, compute magnitude
+   * - ``ego_d``
+     - Use provided helper: ``self._calculate_lateral_offset(transform, waypoint)``
+   * - ``speed_limit``
+     - Use ``self.config.speed_limit``
+   * - ``left_lane_exists``
+     - Check ``waypoint.get_left_lane()`` is not None and is a driving lane
+   * - ``right_lane_exists``
+     - Check ``waypoint.get_right_lane()`` is not None and is a driving lane
+   * - ``left_lane_clear``
+     - No traffic vehicle in left lane within ``lane_change_gap``
+   * - ``right_lane_clear``
+     - No traffic vehicle in right lane within ``lane_change_gap``
+   * - ``vehicle_ahead``
+     - True if traffic vehicle in same lane ahead within ``detection_range``
+   * - ``vehicle_ahead_distance``
+     - Distance to closest vehicle ahead in same lane
+   * - ``vehicle_ahead_speed``
+     - Speed of vehicle ahead
+
+**Helper methods available:**
+
+.. code-block:: python
+
+   # Calculate lateral offset (which lane ego is in)
+   ego_d = self._calculate_lateral_offset(ego_transform, ego_waypoint)
+   
+   # Calculate relative position of another vehicle
+   # Returns: (longitudinal_offset, lateral_offset)
+   # Positive longitudinal = ahead, Positive lateral = left
+   rel_x, rel_d = self._calculate_relative_position(ego_transform, traffic_transform)
+
+**Configuration parameters:**
+
+.. code-block:: python
+
+   self.config.lane_width = 3.5        # meters
+   self.config.detection_range = 100.0  # meters
+   self.config.lane_change_gap = 25.0   # meters
+   self.config.speed_limit = 31.0       # m/s
+
+**Lane boundaries for classification:**
+
+- Same lane: ``|rel_d| < lane_width / 2``
+- Left lane: ``lane_width / 2 < rel_d < 1.5 * lane_width``
+- Right lane: ``-1.5 * lane_width < rel_d < -lane_width / 2``
+
+Step 3: Run Scenarios
+~~~~~~~~~~~~~~~~~~~~~
+
+**Start CARLA server** (keep running in separate terminal):
+
+.. code-block:: bash
+
+   ./CarlaUE4.sh <options>
+
+**Reset CARLA** (recommended before each run):
+
+.. code-block:: bash
+
+   cd rwa3_starter/carla
+   python3 reset_carla.py
+
+**Run scenarios:**
+
+.. code-block:: bash
+
+   # Empty road - tests lane keeping
+   python3 carla_simulator.py --scenario empty --duration 60
+   
+   # Follow vehicle - tests vehicle following
+   python3 carla_simulator.py --scenario follow --duration 60
+   
+   # Overtake - tests lane change decisions
+   python3 carla_simulator.py --scenario overtake --duration 90
+
+CARLA Scenario: Empty Road
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Description:** No traffic vehicles. Ego vehicle should cruise at speed limit.
+
+**Expected behavior:** ``LANE_KEEP`` throughout, stable driving through curves.
+
+.. code-block:: bash
+
+   python3 carla_simulator.py --scenario empty --duration 60
+
+**Demo:**
+
+.. video:: /_static/rwa3/carla_empty.mp4
+   :width: 640
+   :height: 360
+
+CARLA Scenario: Follow Vehicle
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Description:** Lead vehicle ahead with blockers in adjacent lanes preventing lane changes.
+
+**Expected behavior:** ``FOLLOW_VEHICLE`` throughout, matching lead vehicle speed.
+
+.. note::
+
+   Behaviors may alternate between ``FOLLOW_VEHICLE`` and ``LANE_KEEP``: This is fine.
+
+
+.. code-block:: bash
+
+   python3 carla_simulator.py --scenario follow --duration 60
+
+
+
+**Demo:**
+
+.. video:: /_static/rwa3/carla_follow.mp4
+   :width: 640
+   :height: 360
+
+CARLA Scenario: Overtake
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Description:** Slow vehicle in center lane, left lane clear initially, another slow vehicle further ahead in left lane.
+
+**Expected behavior:** ``LANE_CHANGE_LEFT``, ``LANE_KEEP``, ``LANE_CHANGE_RIGHT``, ``FOLLOW_VEHICLE``
+
+.. code-block:: bash
+
+   python3 carla_simulator.py --scenario overtake --duration 90
+
+**Demo:**
+
+.. video:: /_static/rwa3/carla_overtake.mp4
+   :width: 640
+   :height: 360
+
+Troubleshooting
+~~~~~~~~~~~~~~~
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+   :class: compact-table
+
+   * - **Issue**
+     - **Solution**
+   * - CARLA freezes / no response
+     - Run ``python reset_carla.py`` to disable synchronous mode
+   * - "Town04 not available"
+     - Install additional maps (see ROS 2 Jazzy Setup Guide)
+   * - Connection refused
+     - Ensure CARLA server is running on port 2000
+   * - Vehicle spawns then disappears
+     - Map may not have multi-lane roads; ensure Town04 is loaded
+   * - Pygame window doesn't appear
+     - Check pygame is installed: ``pip install pygame``
+   * - Import errors
+     - Don't move the ``carla/`` folder; run from inside it
+
+Bonus Grading
+~~~~~~~~~~~~~
+
+**Total: +20 points**
+
+.. list-table::
+   :widths: 60 20
+   :header-rows: 1
+   :class: compact-table
+
+   * - **Criterion**
+     - **Points**
+   * - CARLA connection works, vehicle spawns and drives
+     - +5
+   * - ``get_environment_state()`` correctly extracts ego speed and lane info
+     - +5
+   * - ``get_environment_state()`` correctly detects traffic vehicles
+     - +5
+   * - All three scenarios complete successfully with correct behaviors
+     - +5
+
+.. note::
+
+   Only include ``carla_interface.py`` in your submission (other CARLA scripts are provided and unchanged). Video recordings should be 30-60 seconds each, clearly showing the behavior transitions.
 
 ---------------------------------------------------------
 11. References

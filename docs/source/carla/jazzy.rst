@@ -101,6 +101,117 @@ Step 2: Install Additional Dependencies
    python3 -c "import numpy; import pygame; import carla; print('All dependencies OK')"
 
 ---------------------------------------------------------
+Step 2.5: Download Additional Maps (Town04)
+---------------------------------------------------------
+
+CARLA's base installation includes limited maps. For highway scenarios (e.g., behavioral planning assignments), you need **Town04** which has a dedicated multi-lane highway loop.
+
+Download Additional Maps
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+First, download the additional maps package on your **host machine**:
+
+.. code-block:: bash
+
+   # Download additional maps for CARLA 0.9.16
+   cd ~/Downloads
+   wget https://carla-releases.s3.us-east-005.backblazeb2.com/Linux/AdditionalMaps_0.9.16.tar.gz
+
+Install Maps into Docker Container
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Method 1: Copy and Extract (Recommended)**
+
+.. code-block:: bash
+
+   # 1. Start CARLA container with a name
+   docker run --privileged --gpus all --net=host \
+     --name carla-server \
+     -it carlasim/carla:0.9.16
+
+   # 2. In a NEW terminal, copy the maps to the container
+   docker cp ~/Downloads/AdditionalMaps_0.9.16.tar.gz carla-server:/workspace/
+
+   # 3. Enter the container as root to extract
+   docker exec -it --user root carla-server bash
+
+   # 4. Inside the container, extract and import the maps
+   cd /workspace
+   tar -xzf AdditionalMaps_0.9.16.tar.gz
+   ./ImportAssets.sh
+   rm AdditionalMaps_0.9.16.tar.gz  # Clean up
+
+   # 5. Exit the container
+   exit
+
+   # 6. Restart CARLA to load the new maps
+   docker stop carla-server
+   docker start -ai carla-server
+
+**Method 2: Mount Volume (Persistent)**
+
+If you want maps to persist across container restarts:
+
+.. code-block:: bash
+
+   # Extract maps on host
+   mkdir -p ~/carla-maps
+   tar -xzf ~/Downloads/AdditionalMaps_0.9.16.tar.gz -C ~/carla-maps
+
+   # Run CARLA with volume mount
+   docker run --privileged --gpus all --net=host \
+     -v ~/carla-maps:/workspace/Import \
+     -it carlasim/carla:0.9.16 \
+     /bin/bash -c "./ImportAssets.sh && ./CarlaUE4.sh -nosound -quality-level=Low -vulkan"
+
+Verify Maps Installation
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+After installing the maps, verify Town04 (for instance) is available:
+
+.. code-block:: bash
+
+   # In a Python terminal (on host)
+   python3 -c "
+   import carla
+   client = carla.Client('localhost', 2000)
+   client.set_timeout(10.0)
+   maps = client.get_available_maps()
+   print('Available maps:')
+   for m in sorted(maps):
+       print(f'  - {m.split(\"/\")[-1]}')
+   "
+
+Expected output should include:
+
+.. code-block:: text
+
+   Available maps:
+     - Town01
+     - Town02
+     - Town03
+     - Town04      ← Highway map
+     - Town04_Opt
+     - Town05
+     - ...
+
+Load Town04
+~~~~~~~~~~~
+
+To load Town04 for highway scenarios:
+
+.. code-block:: python
+
+   import carla
+   
+   client = carla.Client('localhost', 2000)
+   client.set_timeout(10.0)
+   
+   # Load Town04 (highway map)
+   world = client.load_world('Town04')
+   print("Town04 loaded successfully!")
+
+---------------------------------------------------------
 Step 3: Clone and Build ROS 2 Bridge Package
 ---------------------------------------------------------
 

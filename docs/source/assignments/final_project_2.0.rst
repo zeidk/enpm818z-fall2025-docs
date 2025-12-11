@@ -31,13 +31,12 @@ Final Project
    **Version 2.1.0** (2025-12-05)
 
    - Added detailed RWA3 integration instructions
-   - Added evaluation guide for standalone and CARLA modes
+   - Added evaluation guide for standalone mode
    - Clarified file dependencies and module connections
 
    **Version 2.0.0** (2025-12-01)
 
    - Refactored to use standalone simulator (no CARLA dependency)
-   - CARLA integration now optional for bonus points
    - Added comprehensive unit tests and visualization
 
    **Version 1.0.0** (2025-11-30)
@@ -55,7 +54,6 @@ Final Project
    **Simulator Options:**
    
    - **Primary:** Standalone Python simulator with matplotlib visualization (60 pts)
-   - **Bonus (+15 pts):** CARLA integration for realistic 3D visualization
 
 ---------------------------------------------------------
 1. Objective
@@ -749,165 +747,6 @@ Before submission, verify:
 
 ☐ Smooth trajectories (no jerky motion)
 
----------------------------------------------------------
-7. Evaluation: CARLA Integration (Bonus +15 pts)
----------------------------------------------------------
-
-For additional credit, integrate your trajectory planner with CARLA for realistic 3D visualization.
-
-Prerequisites
-~~~~~~~~~~~~~~
-
-1. CARLA 0.9.13 or later installed
-2. Python CARLA client library
-3. Completed standalone implementation (all tests passing)
-
-CARLA Setup
-~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Start CARLA server
-   cd /opt/carla
-   ./CarlaUE4.sh -quality-level=Low
-   
-   # In another terminal, verify connection
-   python3 -c "import carla; client = carla.Client('localhost', 2000); print(client.get_world())"
-
-Integration Architecture
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Create ``carla_interface.py`` to bridge your planner with CARLA:
-
-.. code-block:: python
-
-   """carla_interface.py - CARLA Integration for Trajectory Planner"""
-   
-   import carla
-   import numpy as np
-   from frenet import create_reference_path, cartesian_to_frenet, frenet_to_cartesian
-   from polynomial import generate_candidate_trajectories
-   from cost import select_best_trajectory
-   from behavior_tree import BehaviorPlanner
-   from bt_framework import EnvironmentState
-   
-   class CarlaTrajectoryPlanner:
-       def __init__(self, host='localhost', port=2000):
-           # Connect to CARLA
-           self.client = carla.Client(host, port)
-           self.client.set_timeout(10.0)
-           self.world = self.client.get_world()
-           
-           # Get map and create reference path
-           self.map = self.world.get_map()
-           self.ref_path = self._create_reference_path()
-           
-           # Initialize planners
-           self.behavior_planner = BehaviorPlanner()
-           
-           # Spawn ego vehicle
-           self.ego = self._spawn_ego_vehicle()
-           
-       def _create_reference_path(self):
-           """Create reference path from CARLA waypoints."""
-           spawn_points = self.map.get_spawn_points()
-           start_wp = self.map.get_waypoint(spawn_points[0].location)
-           
-           waypoints = []
-           wp = start_wp
-           for _ in range(200):  # 200 waypoints
-               waypoints.append((wp.transform.location.x, wp.transform.location.y))
-               next_wps = wp.next(2.0)  # 2m spacing
-               if next_wps:
-                   wp = next_wps[0]
-               else:
-                   break
-           
-           return create_reference_path(waypoints)
-       
-       def _spawn_ego_vehicle(self):
-           """Spawn ego vehicle in CARLA."""
-           blueprint_library = self.world.get_blueprint_library()
-           vehicle_bp = blueprint_library.filter('vehicle.tesla.model3')[0]
-           spawn_point = self.map.get_spawn_points()[0]
-           return self.world.spawn_actor(vehicle_bp, spawn_point)
-       
-       def get_environment_state(self):
-           """Convert CARLA state to EnvironmentState."""
-           env = EnvironmentState()
-           
-           transform = self.ego.get_transform()
-           velocity = self.ego.get_velocity()
-           
-           env.ego_x = transform.location.x
-           env.ego_y = transform.location.y
-           env.ego_speed = np.sqrt(velocity.x**2 + velocity.y**2)
-           env.speed_limit = 31.0
-           
-           wp = self.map.get_waypoint(transform.location)
-           env.left_lane_exists = wp.get_left_lane() is not None
-           env.right_lane_exists = wp.get_right_lane() is not None
-           
-           env.vehicle_ahead = False
-           env.left_lane_clear = True
-           env.right_lane_clear = True
-           
-           return env
-       
-       def plan_and_execute(self):
-           """Main planning loop."""
-           env = self.get_environment_state()
-           command = self.behavior_planner.get_command(env)
-           
-           s, d = cartesian_to_frenet(env.ego_x, env.ego_y, self.ref_path)
-           
-           current_state = {
-               's': s, 'd': d, 
-               's_dot': env.ego_speed, 'd_dot': 0,
-               's_ddot': 0, 'd_ddot': 0
-           }
-           
-           candidates = generate_candidate_trajectories(
-               current_state,
-               target_d=command.target_d,
-               target_speed=command.target_speed,
-               T_base=command.T
-           )
-           
-           best = select_best_trajectory(
-               candidates, command.target_d, command.target_speed
-           )
-           
-           if best:
-               self._execute_trajectory(best)
-
-Running CARLA Scenarios
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   # Terminal 1: Start CARLA
-   ./CarlaUE4.sh
-   
-   # Terminal 2: Run your planner
-   python3 carla_main.py --scenario empty
-   python3 carla_main.py --scenario follow
-   python3 carla_main.py --scenario overtake
-
-CARLA Bonus Grading
-~~~~~~~~~~~~~~~~~~~~
-
-- **+5 pts:** CARLA connection works, ego follows trajectories
-- **+5 pts:** Traffic vehicles correctly simulated and avoided
-- **+5 pts:** All scenarios complete with video evidence
-
-**Submission for bonus:** Include ``carla/`` folder with:
-
-- ``carla_interface.py`` — Your CARLA integration
-- ``carla_main.py`` — Main script to run scenarios
-- ``video_empty.mp4`` — Empty scenario recording (max 60s)
-- ``video_follow.mp4`` — Follow scenario recording (max 60s)
-- ``video_overtake.mp4`` — Overtake scenario recording (max 60s)
 
 ---------------------------------------------------------
 8. Configuration Parameters
@@ -1043,11 +882,6 @@ Submit a **single ZIP file** named ``groupX_final_project.zip`` containing:
    │   ├── scenario_follow.png       # Screenshot of visualization
    │   ├── scenario_overtake.png     # Screenshot of visualization
    │   └── test_output.txt           # Unit test results
-   ├── carla/                        # BONUS ONLY
-   │   ├── carla_interface.py
-   │   ├── video_empty.mp4
-   │   ├── video_follow.mp4
-   │   └── video_overtake.mp4
    └── report.pdf                    # Required (3-5 pages)
 
 Generating test_output.txt
@@ -1106,11 +940,6 @@ Report Requirements
 - Trajectory quality (3 pts): Smooth, comfortable motion
 - Report (3 pts): Complete, well-written
 
-**CARLA Bonus (+15 pts):**
-
-- Connection works (+5 pts)
-- Traffic avoidance (+5 pts)
-- Video evidence (+5 pts)
 
 ---------------------------------------------------------
 12. Quick Reference: Running Everything
@@ -1141,9 +970,6 @@ Report Requirements
    python3 test_polynomial.py >> results/test_output.txt 2>&1
    python3 test_cost.py >> results/test_output.txt 2>&1
    
-   # 6. CARLA bonus (optional)
-   ./CarlaUE4.sh  # In separate terminal
-   python3 carla_main.py --scenario overtake
 
 Behavior Summary Output
 ~~~~~~~~~~~~~~~~~~~~~~~~
