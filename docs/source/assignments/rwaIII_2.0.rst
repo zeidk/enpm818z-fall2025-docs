@@ -650,12 +650,47 @@ For additional credit, run your behavioral planner in the CARLA 3D driving simul
 
 .. note::
 
-   CARLA integration is **optional**. You can earn full marks (40 pts) without it.
+   CARLA integration is **optional**. 
 
 Overview
 ~~~~~~~~
 
 The CARLA integration uses the **same behavior tree** you implemented for the standalone simulator. The only difference is how perception data is obtained—instead of a simple 2D simulation, you extract it from CARLA's 3D world.
+
+How It Works
+~~~~~~~~~~~~
+
+The CARLA simulator reuses your behavior tree implementation from the main assignment:
+
+**The simulation loop in** ``carla_simulator.py``:
+
+.. code-block:: python
+
+   # 1. Import YOUR behavior tree implementation
+   from behavior_tree import BehaviorPlanner
+   
+   # 2. Create planner instance (your code!)
+   planner = BehaviorPlanner()
+   
+   # 3. Each simulation tick:
+   while running:
+       # Get perception from CARLA (you implement this)
+       env_state = carla_interface.get_environment_state()
+       
+       # Run YOUR behavior tree (same code as standalone simulator)
+       command = planner.get_command(env_state)
+       
+       # Apply command to CARLA vehicle
+       carla_interface.apply_command(command)
+
+**What this means:**
+
+- Your ``bt_nodes.py`` condition and action nodes are used exactly as-is
+- Your ``behavior_tree.py`` ``_build_tree()`` method creates the same tree
+- The ``EnvironmentState`` and ``BehaviorCommand`` dataclasses are identical
+- **You only need to implement** ``get_environment_state()`` to extract perception data from CARLA
+
+This design lets you validate that your behavior tree works correctly in a realistic 3D environment without modifying any of your core planner code.
 
 .. warning::
 
@@ -1048,6 +1083,7 @@ Bonus Grading
 .. note::
 
    Only include ``carla_interface.py`` in your submission (other CARLA scripts are provided and unchanged). Please include video recordings for each scenario and clearly show the behavior transitions from the terminal (like in the demos I provided above).
+
 
 ---------------------------------------------------------
 11. References
