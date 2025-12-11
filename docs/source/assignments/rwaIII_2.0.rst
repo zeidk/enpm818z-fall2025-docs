@@ -1047,7 +1047,7 @@ Bonus Grading
 
 .. note::
 
-   Only include ``carla_interface.py`` in your submission (other CARLA scripts are provided and unchanged). Video recordings should be 30-60 seconds each, clearly showing the behavior transitions.
+   Only include ``carla_interface.py`` in your submission (other CARLA scripts are provided and unchanged). Please include video recordings for each scenario and clearly show the behavior transitions from the terminal (like in the demos I provided above).
 
 ---------------------------------------------------------
 11. References
